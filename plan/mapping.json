@@ -1,0 +1,19 @@
+{
+  "keywords_to_remove": ["um", "uh", "like", "you know"],
+  "keywords_to_sfx": {
+    "applause": "sfx/applause.mp3",
+    "camera": "sfx/camera-click.mp3",
+    "surprised": "sfx/shocking.mp3",
+    "notification": "sfx/notification.mp3",
+    "ding": "sfx/ding.mp3",
+    "woosh": "sfx/woosh.mp3",
+    "cartoon": "sfx/cartoon-slip.mp3",
+    "throw": "sfx/throw.mp3"
+  },
+  "keywords_to_broll": {
+    "office": "broll/office.mp4",
+    "typing": "broll/typing.mp4"
+  },
+  "keywords_to_zoom": ["important", "note", "key point"],
+  "default_transition": "transition/fade.mov"
+}

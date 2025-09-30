@@ -1,0 +1,4 @@
+auto-editor
+openai-whisper
+moviepy
+pydub
