@@ -171,24 +171,48 @@ assets/
 
 ### Configure Mapping
 
-Edit `plan/mapping.json` to define keyword triggers:
+Edit `plan/mapping.json` to describe how the script cleans filler words, merges clips, and injects creative beats. Key sections:
+
+* `filler_detection` – phrases to trim plus ratio & minimum-duration thresholds.
+* `segmenting` – silence merge gap and fallback minimum duration.
+* `defaults` – baseline cooldowns and zoom scale for rules that omit explicit values.
+* `audio` – high/low pass or other ffmpeg-friendly filters.
+* `transitions.rules` – optional conditional transitions with gap windows, keyword scopes, and offsets.
+* `actions.sfx` / `actions.zoom` – rich matching logic using `match_type` (`contains`, `token`, `regex`, etc.) and `scope` (`entry`, `segment`, `either`, `both`).
+
+Example:
 
 ```json
 {
-  "keywords_to_remove": ["um", "uh", "like", "you know"],
-  "keywords_to_sfx": {
-    "applause": "sfx/applause.mp3",
-    "notification": "sfx/notification.mp3",
-    "shocking": "sfx/shocking.mp3"
+  "filler_detection": {
+    "phrases": ["um", "uh", "like", "you know"],
+    "ratio_threshold": 0.55,
+    "min_duration": 1.0
   },
-  "keywords_to_zoom": ["important", "note", "key point"],
-  "keywords_to_broll": {
-    "office": "broll/office.mp4",
-    "typing": "broll/typing.mp4"
-  },
-  "default_transition": "transition/fade.mov"
+  "actions": {
+    "sfx": [
+      {
+        "name": "question ping",
+        "asset": "sfx/ding.mp3",
+        "match_type": "regex",
+        "scope": "segment",
+        "keywords": {"any": ["\\b(what|why|how|when)\\b"]},
+        "offset": 0.05
+      }
+    ],
+    "zoom": [
+      {
+        "name": "key insight",
+        "keywords": {"any": ["important", "key point"]},
+        "min_duration": 2.0,
+        "scale": 1.2
+      }
+    ]
+  }
 }
 ```
+
+Add additional rules to taste—each rule can set custom cooldowns, offsets, scopes, and `keywords.none` exclusions to fine-tune pro-level timing.
 
 ---
 
