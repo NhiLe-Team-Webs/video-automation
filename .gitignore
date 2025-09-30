@@ -1,0 +1,3 @@
+# Ignore raw inputs and generated outputs
+inputs/
+outputs/
