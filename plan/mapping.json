@@ -10,10 +10,6 @@
     "cartoon": "sfx/cartoon-slip.mp3",
     "throw": "sfx/throw.mp3"
   },
-  "keywords_to_broll": {
-    "office": "broll/office.mp4",
-    "typing": "broll/typing.mp4"
-  },
   "keywords_to_zoom": ["important", "note", "key point"],
   "default_transition": "transition/fade.mov"
 }
