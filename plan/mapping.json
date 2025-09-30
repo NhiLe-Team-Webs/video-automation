@@ -1,15 +1,116 @@
 {
-  "keywords_to_remove": ["um", "uh", "like", "you know"],
-  "keywords_to_sfx": {
-    "applause": "sfx/applause.mp3",
-    "camera": "sfx/camera-click.mp3",
-    "surprised": "sfx/shocking.mp3",
-    "notification": "sfx/notification.mp3",
-    "ding": "sfx/ding.mp3",
-    "woosh": "sfx/woosh.mp3",
-    "cartoon": "sfx/cartoon-slip.mp3",
-    "throw": "sfx/throw.mp3"
+  "filler_phrases": [
+    "um",
+    "uh",
+    "like",
+    "you know",
+    "om",
+    "kieu",
+    "kieu nhu",
+    "kieu kieu"
+  ],
+  "filler_ratio_threshold": 0.6,
+  "min_segment_duration": 1.0,
+  "merge_gap_seconds": 0.75,
+  "transition": {
+    "asset": "transition/fade.mov",
+    "gap_threshold": 1.5,
+    "duration": 0.5
   },
-  "keywords_to_zoom": ["important", "note", "key point"],
-  "default_transition": "transition/fade.mov"
+  "sfx_rules": [
+    {
+      "keywords": [
+        "applause",
+        "cheer"
+      ],
+      "asset": "sfx/applause.mp3",
+      "cooldown": 18.0,
+      "offset": 0.15
+    },
+    {
+      "keywords": [
+        "camera",
+        "snapshot"
+      ],
+      "asset": "sfx/camera-click.mp3",
+      "cooldown": 12.0,
+      "offset": 0.0
+    },
+    {
+      "keywords": [
+        "surprised",
+        "wow",
+        "shock"
+      ],
+      "asset": "sfx/shocking.mp3",
+      "cooldown": 15.0,
+      "offset": 0.1
+    },
+    {
+      "keywords": [
+        "notification",
+        "alert",
+        "ping",
+        "ding"
+      ],
+      "asset": "sfx/ding.mp3",
+      "cooldown": 8.0,
+      "offset": 0.0
+    },
+    {
+      "keywords": [
+        "whoosh",
+        "transition",
+        "quet"
+      ],
+      "asset": "sfx/woosh.mp3",
+      "cooldown": 10.0,
+      "offset": 0.0
+    },
+    {
+      "keywords": [
+        "cartoon",
+        "funny"
+      ],
+      "asset": "sfx/cartoon-slip.mp3",
+      "cooldown": 20.0,
+      "offset": 0.0
+    },
+    {
+      "keywords": [
+        "throw",
+        "launch"
+      ],
+      "asset": "sfx/throw.mp3",
+      "cooldown": 20.0,
+      "offset": 0.0
+    }
+  ],
+  "zoom_rules": [
+    {
+      "keywords": [
+        "important",
+        "key point",
+        "diem chinh"
+      ],
+      "scale": 1.2,
+      "min_duration": 2.0,
+      "cooldown": 10.0
+    },
+    {
+      "keywords": [
+        "focus",
+        "look",
+        "xem"
+      ],
+      "scale": 1.15,
+      "min_duration": 1.5,
+      "cooldown": 8.0
+    }
+  ],
+  "zoom_default_scale": 1.12,
+  "noise_reduction": {
+    "highpass_hz": 120,
+    "lowpass_hz": 8000
+  }
 }

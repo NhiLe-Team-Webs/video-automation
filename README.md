@@ -1,154 +1,362 @@
-﻿# Video Automation (Open Source)
+﻿# 🎬 NLT Video Automation
 
-## Overview
-**dYZ Video Automation** helps you turn raw video into a trimmed version, adding effects with just one command. The toolkit combines Auto-Editor to remove silence, Whisper to create subtitles, and MoviePy to apply effects based on a detailed editing plan.
+> Transform raw videos into polished content with automated editing, subtitles, and effects in just one command.
 
-### Automation workflow
-1. Trim silence from the original video.
-2. Generate transcript and subtitle file in `.srt` format.
-3. Generate editing plan (`plan.json`) from transcript and `mapping.json`.
-4. Apply effects, b-roll, SFX, logo to output the finished video.
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![FFmpeg](https://img.shields.io/badge/FFmpeg-required-red.svg)](https://ffmpeg.org/)
 
-## Key features
-- Automate the entire short video processing pipeline.
-- Support running a single command for the entire process or for each individual step.
+---
 
-- Flexible customization via `plan/mapping.json` for SFX, b-roll, zoom, transition.
+## ✨ Overview
 
-- Export with subtitles and a plan for manual editing when needed.
+**NLT Video Automation** is an open-source toolkit that streamlines video editing by combining powerful tools:
+- **Auto-Editor** - Removes silence automatically
+- **Whisper** - Generates accurate subtitles
+- **MoviePy** - Applies effects based on intelligent editing plans
 
-## Folder Structure
+### 🔄 Automation Workflow
+
+```mermaid
+graph LR
+    A[Raw Video] --> B[Trim Silence]
+    B --> C[Generate Subtitles]
+    C --> D[Create Editing Plan]
+    D --> E[Apply Effects]
+    E --> F[Final Video]
+```
+
+1. **Trim** - Remove silence from original video
+2. **Transcribe** - Generate transcript and `.srt` subtitle file
+3. **Plan** - Create `plan.json` from transcript and `mapping.json`
+4. **Apply** - Add effects, b-roll, SFX, logo to produce final video
+
+---
+
+## 🚀 Key Features
+
+- ⚡ **One-Command Pipeline** - Run entire workflow or individual steps
+- 🎨 **Flexible Customization** - Configure SFX, b-roll, zoom, transitions via `mapping.json`
+- 📝 **Subtitle Export** - Generate professional subtitles automatically
+- 🎯 **Keyword-Based Effects** - Smart effects triggered by transcript keywords
+- 🔧 **Manual Override** - Export plans for fine-tuned manual editing
+
+---
+
+## 📁 Folder Structure
+
 ```
 video-automation/
-assets/
-broll/ # Auxiliary videos (illustrative cuts)
-brand/ # Logo, intro/outro
-sfx/ # Sound effects
-transition/ # Default transition effects
-inputs/ # Input video (e.g. 1.mp4)
-outputs/ # Output after each step and final video
-plan/ # Mapping configuration and plans
-scripts/ # Script to create and apply plans with MoviePy
-run_all.bat # Full pipeline for Windows
-run_all.sh # Full pipeline for macOS/Linux
-requirements.txt
+├── 📂 assets/
+│   ├── broll/          # B-roll footage
+│   ├── brand/          # Logos, intro/outro
+│   ├── sfx/            # Sound effects
+│   └── transition/     # Transition clips
+├── 📂 inputs/          # Raw video files (e.g., 1.mp4)
+├── 📂 outputs/         # Processed videos & intermediate files
+├── 📂 plan/            # Configuration & editing plans
+├── 📂 scripts/         # Python automation scripts
+├── 📜 run_all.bat      # Windows full pipeline
+├── 📜 run_all.sh       # macOS/Linux full pipeline
+├── 📜 requirements.txt # Python dependencies
+└── 📜 README.md
 ```
-## System requirements
-- Windows 10/11, macOS or Linux.
-- Python 3.11 or higher (should be installed from [python.org/downloads](https://www.python.org/downloads/)).
 
-- `pip` comes with Python to install libraries.
+---
 
-- FFmpeg is installed and added to `PATH` (`ffmpeg -version` to check).
+## 💻 System Requirements
 
-- Python packages: Auto-Editor, OpenAI Whisper, MoviePy, PyDub (install with `pip`).
+| Component | Requirement |
+|-----------|-------------|
+| **OS** | Windows 10/11, macOS, or Linux |
+| **Python** | 3.11 or higher ([Download](https://www.python.org/downloads/)) |
+| **FFmpeg** | Latest version ([Download](https://ffmpeg.org/download.html)) |
+| **Disk Space** | 2GB+ recommended |
 
-## Installation
-1. **Download source code**
+### Python Packages
+- Auto-Editor
+- OpenAI Whisper
+- MoviePy
+- PyDub
+
+---
+
+## 🛠️ Installation
+
+### 1️⃣ Download Source Code
+
 ```bash
 git clone https://github.com/<your-org>/video-automation.git
 cd video-automation
 ```
-Or download ZIP from GitHub, extract and open in terminal.
 
-2. **Create a virtual environment (recommended)**
+Or download ZIP from GitHub and extract.
+
+### 2️⃣ Create Virtual Environment (Recommended)
+
 ```bash
+# Create environment
 python -m venv .venv
-# Windows
+
+# Activate on Windows
 .venv\Scripts\activate
-# macOS/Linux
+
+# Activate on macOS/Linux
 source .venv/bin/activate
 ```
 
-3. **Install Python libraries**
+### 3️⃣ Install Python Dependencies
+
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-4. **Install FFmpeg**
-- Windows: download the build at [ffmpeg.org/download.html](https://ffmpeg.org/download.html), unzip, add the `bin` folder to `PATH`.
+### 4️⃣ Install FFmpeg
 
-- macOS: use `brew install ffmpeg`.
+<details>
+<summary><b>Windows</b></summary>
 
-- Linux: use a package manager (e.g. `sudo apt install ffmpeg`).
+1. Download from [ffmpeg.org](https://ffmpeg.org/download.html)
+2. Extract to a folder (e.g., `C:\ffmpeg`)
+3. Add `C:\ffmpeg\bin` to system PATH
+4. Verify: `ffmpeg -version`
+</details>
 
-5. **Verify the installation**
+<details>
+<summary><b>macOS</b></summary>
+
+```bash
+brew install ffmpeg
+```
+</details>
+
+<details>
+<summary><b>Linux</b></summary>
+
+```bash
+sudo apt update
+sudo apt install ffmpeg
+```
+</details>
+
+### 5️⃣ Verify Installation
+
 ```bash
 python --version
-pip list | findstr auto-editor
+pip list | grep auto-editor
 ffmpeg -version
 ```
 
-## Prepare input data
-- Put the original video in `inputs/` and name it in order (e.g. `1.mp4`).
-- Organize assets in `assets/`:
-- `assets/sfx/`: sound effects, e.g. `applause.mp3`, `ding.mp3`.
-- `assets/broll/`: demo videos, e.g. `office.mp4`, `typing.mp4`.
-- `assets/transition/`: transition clips, e.g. `fade.mov`.
-- `assets/brand/`: logos, intro/outro.
-- Adjust `plan/mapping.json` to map keywords to the desired asset file:
+---
+
+## 📦 Prepare Input Data
+
+### Video Files
+Place raw videos in `inputs/` folder:
+```
+inputs/
+└── 1.mp4
+```
+
+### Assets Organization
+
+```
+assets/
+├── sfx/              # applause.mp3, ding.mp3, notification.mp3
+├── broll/            # office.mp4, typing.mp4
+├── transition/       # fade.mov
+└── brand/            # logo.png, intro.mp4
+```
+
+### Configure Mapping
+
+Edit `plan/mapping.json` to define keyword triggers:
+
 ```json
 {
-"keywords_to_remove": ["um", "uh", "like", "you know"],
-"keywords_to_sfx": {
-"applause": "sfx/applause.mp3",
-"notification": "sfx/notification.mp3"
-},
-"keywords_to_zoom": ["important", "note", "key point"],
-"default_transition": "transition/fade.mov"
+  "keywords_to_remove": ["um", "uh", "like", "you know"],
+  "keywords_to_sfx": {
+    "applause": "sfx/applause.mp3",
+    "notification": "sfx/notification.mp3",
+    "shocking": "sfx/shocking.mp3"
+  },
+  "keywords_to_zoom": ["important", "note", "key point"],
+  "keywords_to_broll": {
+    "office": "broll/office.mp4",
+    "typing": "broll/typing.mp4"
+  },
+  "default_transition": "transition/fade.mov"
 }
 ```
 
-## Run the pipeline
-### Fastest way
-- **Windows**
+---
+
+## ▶️ Run the Pipeline
+
+### 🎯 Quick Start (Full Automation)
+
+**Windows:**
 ```powershell
 .\run_all.bat
 ```
-- **macOS/Linux**
+
+**macOS/Linux:**
 ```bash
 chmod +x run_all.sh
-./run_all.sh 
+./run_all.sh
 ```
 
-### Step by step craft
-1. Cut silence: 
-```bash 
-python -m auto_editor inputs/1.mp4 -o outputs/stage1_cut.mp4 --edit audio:threshold=0.04 --quiet 
+---
+
+### 🔧 Step-by-Step Execution
+
+#### Step 1: Trim Silence
+```bash
+python -m auto_editor inputs/1.mp4 \
+  -o outputs/stage1_cut.mp4 \
+  --edit audio:threshold=0.04 \
+  --quiet
 ```
-2. Create transcript and English subtitles: 
-```bash 
-python -m whisper outputs/stage1_cut.mp4 --model small --language en --task transcribe --output_format srt --output_dir outputs 
+
+#### Step 2: Generate Subtitles
+```bash
+python -m whisper outputs/stage1_cut.mp4 \
+  --model small \
+  --language en \
+  --task transcribe \
+  --output_format srt \
+  --output_dir outputs
 ```
-3. Generate plan from transcript: 
-```bash 
-python scripts/make_plan_from_srt.py outputs/stage1_cut.srt plan/mapping.json outputs/plan.json 
+
+#### Step 3: Create Editing Plan
+```bash
+python scripts/make_plan_from_srt.py \
+  outputs/stage1_cut.srt \
+  plan/mapping.json \
+  outputs/plan.json
 ```
-4. Apply plan with MoviePy: 
-```bash 
-python scripts/apply_plan_moviepy.py outputs/stage1_cut.mp4 outputs/plan.json NONE outputs/final.mp4
+
+#### Step 4: Apply Effects
+```bash
+python scripts/apply_plan_moviepy.py \
+  outputs/stage1_cut.mp4 \
+  outputs/plan.json \
+  NONE \
+  outputs/final.mp4
 ```
-The third parameter (`NONE`) is the logo path. Change to a specific file or keep `NONE` if no logo is inserted.
 
-## Expected output
-- `outputs/stage1_cut.mp4`: video with cut silence.
+> **💡 Tip:** Replace `NONE` with logo path (e.g., `assets/brand/logo.png`) to add branding.
 
-- `outputs/stage1_cut.srt`: automatic subtitles.
+---
 
-- `outputs/plan.json`: editing plan with b-roll, SFX, zoom information.
+## 📤 Expected Output
 
-- `outputs/final.mp4`: final video after effects are applied.
+| File | Description |
+|------|-------------|
+| `outputs/stage1_cut.mp4` | Video with silence removed |
+| `outputs/stage1_cut.srt` | Auto-generated subtitles |
+| `outputs/plan.json` | Editing plan with effects metadata |
+| `outputs/final.mp4` | Final processed video |
 
-## Advanced customization
-- **Add SFX**: add file to `assets/sfx/` then update `keywords_to_sfx`.
+---
 
-- **Add b-roll**: put file in `assets/broll/` and declare corresponding keywords.
-- **Zoom Adjustment**: edit the `keywords_to_zoom` list.
+## 🎨 Advanced Customization
 
-- **Change default transition**: point `default_transition` to a new file in `assets/transition/`.
+### Add Sound Effects
+1. Place audio file in `assets/sfx/`
+2. Update `mapping.json`:
+```json
+"keywords_to_sfx": {
+  "wow": "sfx/wow.mp3"
+}
+```
 
-- **Disable logo**: pass `NONE` (or leave blank) in the apply plan step.
+### Add B-Roll Footage
+1. Place video in `assets/broll/`
+2. Define keywords:
+```json
+"keywords_to_broll": {
+  "computer": "broll/computer_screen.mp4"
+}
+```
 
-## Troubleshooting
-- `python` or `pip` doesn't
+### Adjust Zoom Triggers
+```json
+"keywords_to_zoom": ["important", "critical", "attention"]
+```
+
+### Change Default Transition
+```json
+"default_transition": "transition/swipe.mov"
+```
+
+### Disable Logo
+Pass `NONE` in Step 4 or leave blank.
+
+---
+
+## 🐛 Troubleshooting
+
+### `python` or `pip` not recognized
+- **Solution:** Ensure Python is in system PATH
+- Verify with `python --version`
+
+### FFmpeg errors
+- **Check installation:** `ffmpeg -version`
+- **Reinstall:** Follow installation steps above
+
+### Module not found errors
+```bash
+pip install -r requirements.txt --force-reinstall
+```
+
+### Whisper model download fails
+- Check internet connection
+- Models download automatically on first run
+- Default model: `small` (faster, less accurate)
+- For better accuracy: change to `medium` or `large`
+
+### Permission errors on Linux/macOS
+```bash
+chmod +x run_all.sh
+chmod +x scripts/*.py
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 🙏 Acknowledgments
+
+Built with:
+- [Auto-Editor](https://github.com/WyattBlue/auto-editor)
+- [OpenAI Whisper](https://github.com/openai/whisper)
+- [MoviePy](https://github.com/Zulko/moviepy)
+
+---
+
+## 📧 Support
+
+Having issues? [Open an issue](https://github.com/<your-org>/video-automation/issues) on GitHub.
+
+---
+
+<div align="center">
+  <b>Made with ❤️ by NLT</b>
+  <br>
+  ⭐ Star this repo if you find it helpful!
+</div>

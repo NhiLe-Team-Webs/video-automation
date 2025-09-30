@@ -2,7 +2,7 @@
 setlocal
 
 REM 1) First cut - cắt im lặng
-auto-editor inputs\1.mp4 -o outputs\stage1_cut.mp4 --silent-threshold 0.04 --quiet
+python -m auto_editor inputs\1.mp4 -o outputs\stage1_cut.mp4 --edit audio:threshold=0.04 --quiet
 
 REM 2) Transcript - tạo phụ đề (EN)
 python -m whisper outputs\stage1_cut.mp4 --model small --language en --task transcribe --output_format srt --output_dir outputs
