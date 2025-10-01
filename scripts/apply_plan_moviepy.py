@@ -114,15 +114,30 @@ def make_caption_clip(text: str, start_time: float, duration: float, style_name:
     if style.get("bg_color"):
         margin_kwargs["color"] = style["bg_color"]
 
+    textclip_kwargs = {
+        'txt': text,
+        'fontsize': style.get('fontsize', 56),
+        'color': style.get('color', 'white'),
+        'method': 'caption',
+        'size': (width, None),
+    }
+    font_name = style.get('font')
+    if font_name:
+        textclip_kwargs['font'] = font_name
+
     try:
-        clip = TextClip(
-            text,
-            fontsize=style.get("fontsize", 56),
-            font=style.get("font"),
-            color=style.get("color", "white"),
-            method="caption",
-            size=(width, None),
-        )
+        clip = TextClip(**textclip_kwargs)
+    except TypeError as exc:
+        if 'font' in str(exc).lower() and 'font' in textclip_kwargs:
+            textclip_kwargs.pop('font')
+            try:
+                clip = TextClip(**textclip_kwargs)
+            except Exception as retry_exc:  # pragma: no cover - runtime dependency
+                print(f"[SKIP] Caption render failed: {retry_exc}")
+                return None
+        else:
+            print(f"[SKIP] Caption render failed: {exc}")
+            return None
     except Exception as exc:  # pragma: no cover - runtime dependency
         print(f"[SKIP] Caption render failed: {exc}")
         return None
