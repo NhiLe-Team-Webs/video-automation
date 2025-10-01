@@ -8,13 +8,30 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List
+from typing import Any, Dict, Iterable, List
 
 import google.generativeai as genai
 from dotenv import load_dotenv
 
 TIMECODE_RE = re.compile(r"^(?P<start>\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(?P<end>\d{2}:\d{2}:\d{2},\d{3})$")
 JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
+
+AVAILABLE_SFX: Dict[str, str] = {
+    "applause.mp3": "assets/sfx/applause.mp3",
+    "camera-click.mp3": "assets/sfx/camera-click.mp3",
+    "cartoon-slip.mp3": "assets/sfx/cartoon-slip.mp3",
+    "ding.mp3": "assets/sfx/ding.mp3",
+    "notification.mp3": "assets/sfx/notification.mp3",
+    "shocking.mp3": "assets/sfx/shocking.mp3",
+    "studio-audience-awwww-sound-fx.mp3": "assets/sfx/studio-audience-awwww-sound-fx.mp3",
+    "throw.mp3": "assets/sfx/throw.mp3",
+    "woosh.mp3": "assets/sfx/woosh.mp3",
+}
+AVAILABLE_TRANSITION_ASSETS: Dict[str, str] = {}
+TRANSITION_STYLES = ["flash-white", "dip-to-black", "spotlight-rise"]
+CAPTION_STYLES = ["highlight-yellow", "center-pop", "lower-third"]
+MAX_RECOMMENDED_ZOOMS = 6
+MIN_ZOOM_GAP_SECONDS = 8.0
 
 
 @dataclass
@@ -57,6 +74,10 @@ def parse_srt(path: Path, *, max_entries: int | None = None) -> List[SrtEntry]:
     return entries
 
 
+def _format_available(values: Iterable[str]) -> str:
+    return ", ".join(values)
+
+
 def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None = None) -> str:
     timeline_lines = []
     for entry in entries:
@@ -71,21 +92,45 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         "actions": [
             {
                 "type": "zoom",
-                "start": 2.1,
-                "end": 4.3,
-                "scale": 1.12,
-                "source_start": 20.5,
-                "source_end": 22.7,
-            }
+                "start": 1.5,
+                "end": 4.2,
+                "scale": 1.18,
+            },
+            {
+                "type": "sfx",
+                "asset": "assets/sfx/ding.mp3",
+                "time": 4.2,
+            },
+            {
+                "type": "caption",
+                "text": "KEY IDEA: Stay consistent",
+                "time": 4.2,
+                "duration": 2.2,
+                "style": "highlight-yellow",
+            },
+            {
+                "type": "transition",
+                "style": "flash-white",
+                "time": 6.4,
+                "duration": 0.45,
+            },
         ],
         "audio": {"filters": {"highpass_hz": 120.0, "lowpass_hz": None}},
-        "meta": {"style": "motivational", "notes": ["trim long pauses"]},
+        "meta": {
+            "style": "motivational",
+            "notes": ["trim long pauses"],
+        },
     }
+
+    sfx_options = _format_available(AVAILABLE_SFX.values())
+    sfx_names = _format_available(AVAILABLE_SFX.keys())
+    transition_styles = _format_available(TRANSITION_STYLES)
+    caption_styles = _format_available(CAPTION_STYLES)
 
     instructions = (
         "You are an assistant video editor. Create a JSON plan that trims filler pauses, "
-        "groups sentences into engaging segments, and suggests dynamic actions (zoom, transitions, sfx). "
-        "Tailor the pacing so motivational peaks receive stronger emphasis."
+        "groups sentences into engaging segments, and layers in tasteful zooms, highlight captions, sound effects, and transitions. "
+        "Dial back over-editing: focus on a handful of high-impact moments."
     )
     if extra_instructions:
         instructions += f" Extra guidance from user: {extra_instructions.strip()}"
@@ -95,14 +140,14 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         "Output strictly valid JSON using this schema (example values shown, update as needed):\n"
         f"{json.dumps(schema_hint, indent=2)}\n\n"
         "Rules:\n"
-        "- `segments` holds chronological sections with `start`, `end`, `timeline_start`.\n"
-        "- Trim or merge entries when pauses exceed ~0.7 seconds unless dramatic pause required.\n"
-        "- `actions` may include `zoom`, `transition`, `sfx`, or `caption` items with precise timing in seconds.\n"
+        "- `segments` hold chronological sections with `start`, `end`, `timeline_start` (floats in seconds).\n"
+        "- Trim or merge entries when pauses exceed ~0.7s unless the silence is dramatic.\n"
+        f"- Keep the number of `zoom` actions <= {MAX_RECOMMENDED_ZOOMS} and space them >= {MIN_ZOOM_GAP_SECONDS}s apart. Use scale between 1.1 and 1.25.\n"
+        "- Use `sfx` objects with `asset` + `time` (seconds). Available assets: " + sfx_options + " (names: " + sfx_names + ").\n"
+        "- Add highlight `caption` actions (with `text`, `time`, `duration`, optional `style`) for the biggest takeaways. Allowed styles: " + caption_styles + ". Pair each caption with an SFX when it lands.\n"
+        "- `transition` actions may specify an `asset` (video overlay) or a `style` from: " + transition_styles + ". Run them on topic or energy shifts only.\n"
         "- Keep `timeline_start` contiguous (no gaps).\n"
-        "- Suggest only assets that exist or use placeholders like `assets/transition_soft.mp4`.\n"
-        "- If unsure about an action, omit it.\n"
-        "- Use floats for all times.\n"
-        "- All the sfx name: applause.mp3 camera-click.mp3 cartoon-slip.mp3 ding.mp3 notification.mp3 shocking.mp3 studio-audience-awwww-sound-fx.mp3 throw.mp3 woosh.mp3\n"
+        "- Use floats for all times/durations.\n"
         "- Include optional `notes` inside `meta` for human editors.\n"
         "Respond with JSON only inside a single code block.\n\n"
         "Transcript segments (ordered):\n"
@@ -127,6 +172,127 @@ def extract_plan_json(text: str) -> dict:
                 last_error = exc
                 continue
     raise ValueError(f"Could not parse JSON from LLM response: {last_error}")
+
+
+def ensure_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def resolve_catalog(asset: str | None, catalog: Dict[str, str], prefix: str) -> str | None:
+    if not asset:
+        return None
+    if asset in catalog:
+        return catalog[asset]
+    if asset.startswith("assets/"):
+        return asset
+    return f"{prefix}{asset}"
+
+
+def normalize_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(plan, dict):
+        raise ValueError("Plan must be a JSON object.")
+
+    segments = plan.get("segments")
+    if isinstance(segments, list):
+        for segment in segments:
+            if not isinstance(segment, dict):
+                continue
+            for key in ("start", "end", "timeline_start"):
+                if key in segment:
+                    segment[key] = ensure_float(segment.get(key))
+        segments.sort(key=lambda seg: seg.get("timeline_start", seg.get("start", 0.0)))
+
+    normalized_actions: List[Dict[str, Any]] = []
+    zoom_count = 0
+    last_zoom_time = -1e9
+
+    for raw_action in plan.get("actions", []):
+        if not isinstance(raw_action, dict):
+            continue
+        action_type = (raw_action.get("type") or "").lower()
+        if not action_type:
+            continue
+        action: Dict[str, Any] = dict(raw_action)
+        action["type"] = action_type
+
+        if action_type == "zoom":
+            start_time = ensure_float(action.get("start", action.get("time")))
+            end_time = ensure_float(action.get("end", start_time + 1.5))
+            if end_time <= start_time:
+                end_time = start_time + 1.2
+            scale = ensure_float(action.get("scale", 1.15))
+            scale = max(1.05, min(1.25, scale))
+            if zoom_count >= MAX_RECOMMENDED_ZOOMS or start_time - last_zoom_time < MIN_ZOOM_GAP_SECONDS:
+                continue
+            last_zoom_time = start_time
+            zoom_count += 1
+            action.update({"start": start_time, "end": end_time, "scale": scale})
+            action.pop("time", None)
+            for key in ("source_start", "source_end"):
+                if key in action:
+                    action[key] = ensure_float(action.get(key))
+
+        elif action_type == "sfx":
+            asset = action.get("asset") or action.get("name")
+            asset = resolve_catalog(asset, AVAILABLE_SFX, "assets/sfx/")
+            time_value = ensure_float(action.get("time", action.get("start")))
+            action = {"type": "sfx", "asset": asset, "time": time_value}
+
+        elif action_type == "transition":
+            asset = action.get("asset") or action.get("name")
+            asset = resolve_catalog(asset, AVAILABLE_TRANSITION_ASSETS, "assets/transition/")
+            style = (action.get("style") or "").lower()
+            if style and style not in TRANSITION_STYLES:
+                style = TRANSITION_STYLES[0]
+            if not style and not asset:
+                style = TRANSITION_STYLES[0]
+            time_value = ensure_float(action.get("time", action.get("start")))
+            duration = max(0.25, ensure_float(action.get("duration", action.get("length", 0.5))))
+            action = {
+                "type": "transition",
+                "time": time_value,
+                "duration": duration,
+                "asset": asset,
+                "style": style or None,
+            }
+
+        elif action_type == "caption":
+            text = (action.get("text") or action.get("title") or "").strip()
+            if not text:
+                continue
+            time_value = ensure_float(action.get("time", action.get("start")))
+            duration = ensure_float(action.get("duration"))
+            if not duration and action.get("end") is not None:
+                duration = ensure_float(action.get("end")) - time_value
+            if duration <= 0:
+                duration = 2.5
+            style = (action.get("style") or CAPTION_STYLES[0]).lower()
+            if style not in CAPTION_STYLES:
+                style = CAPTION_STYLES[0]
+            position = action.get("position")
+            action = {
+                "type": "caption",
+                "text": text,
+                "time": time_value,
+                "duration": duration,
+                "style": style,
+            }
+            if position:
+                action["position"] = position
+
+        else:
+            normalized_actions.append(action)
+            continue
+
+        normalized_actions.append(action)
+
+    plan["actions"] = normalized_actions
+    meta = plan.setdefault("meta", {})
+    meta.setdefault("max_zoom_actions", MAX_RECOMMENDED_ZOOMS)
+    return plan
 
 
 def configure_client(model_name: str | None = None) -> genai.GenerativeModel:
@@ -206,6 +372,7 @@ def main(argv: List[str] | None = None) -> int:
 
     try:
         plan = extract_plan_json(raw_text)
+        plan = normalize_plan(plan)
     except ValueError as exc:
         print(f"[ERROR] {exc}")
         print("--- Gemini response ---")
@@ -220,3 +387,4 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
