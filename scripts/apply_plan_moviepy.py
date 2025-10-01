@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+import time
 
 from moviepy import (
     AudioFileClip,
@@ -93,6 +94,15 @@ def resolve_asset_path(asset: str | None, subdir: str) -> str | None:
     if os.path.exists(candidate):
         return candidate
     return candidate
+
+def safe_close_clip(clip):
+    close = getattr(clip, 'close', None)
+    if callable(close):
+        try:
+            close()
+        except Exception:
+            pass
+
 
 
 def make_caption_clip(text: str, start_time: float, duration: float, style_name: str, base_width: int):
@@ -336,6 +346,18 @@ composite.write_videofile(
     audio_codec='aac',
     audio=True,
 )
+
+safe_close_clip(composite)
+safe_close_clip(base_clip)
+if base_clip is not source_clip:
+    safe_close_clip(source_clip)
+else:
+    safe_close_clip(source_clip)
+for layer in layers_v:
+    if layer not in (base_clip, composite):
+        safe_close_clip(layer)
+for audio_layer in layers_a:
+    safe_close_clip(audio_layer)
 
 if needs_audio_filters:
     ffmpeg_cmd = [

@@ -239,6 +239,8 @@ chmod +x run_all.sh
 ./run_all.sh
 ```
 
+> Tip: If your source video uses AV1 (or any slower-to-decode codec), transcode to H.264 first for much faster auto-editor processing: `ffmpeg -i inputs/1.mp4 -c:v libx264 -preset fast -crf 20 -c:a copy inputs/1_h264.mp4`.
+
 > Default: script tries `make_plan_gemini.py` first; on missing Gemini key or API error it falls back to `make_plan_from_srt.py` with `plan/mapping.json`.
 
 ---
