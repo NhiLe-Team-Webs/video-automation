@@ -143,7 +143,7 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         "- `segments` hold chronological sections with `start`, `end`, `timeline_start` (floats in seconds).\n"
         "- Trim or merge entries when pauses exceed ~0.7s unless the silence is dramatic.\n"
         f"- Keep the number of `zoom` actions <= {MAX_RECOMMENDED_ZOOMS} and space them >= {MIN_ZOOM_GAP_SECONDS}s apart. Use scale between 1.1 and 1.25.\n"
-        "- Use `sfx` objects with `asset` + `time` (seconds). Available assets: " + sfx_options + " (names: " + sfx_names + ").\n"
+        "- Use `sfx` objects with `asset` + `time` (seconds). Assets must live under `assets/sfx/` in this project. Available assets: " + sfx_options + " (names: " + sfx_names + ").\n"
         "- Add highlight `caption` actions (with `text`, `time`, `duration`, optional `style`) for the biggest takeaways. Allowed styles: " + caption_styles + ". Pair each caption with an SFX when it lands.\n"
         "- `transition` actions may specify an `asset` (video overlay) or a `style` from: " + transition_styles + ". Run them on topic or energy shifts only.\n"
         "- Keep `timeline_start` contiguous (no gaps).\n"
@@ -387,4 +387,5 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
 

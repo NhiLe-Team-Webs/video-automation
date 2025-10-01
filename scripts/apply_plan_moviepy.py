@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 import subprocess
 import sys
@@ -95,8 +95,9 @@ def resolve_asset_path(asset: str | None, subdir: str) -> str | None:
         return candidate
     return candidate
 
+
 def safe_close_clip(clip):
-    close = getattr(clip, 'close', None)
+    close = getattr(clip, "close", None)
     if callable(close):
         try:
             close()
@@ -125,7 +126,6 @@ def make_caption_clip(text: str, start_time: float, duration: float, style_name:
         margin_kwargs["color"] = style["bg_color"]
 
     textclip_kwargs = {
-        'txt': text,
         'fontsize': style.get('fontsize', 56),
         'color': style.get('color', 'white'),
         'method': 'caption',
@@ -135,13 +135,22 @@ def make_caption_clip(text: str, start_time: float, duration: float, style_name:
     if font_name:
         textclip_kwargs['font'] = font_name
 
+    textclip_kwargs.pop('txt', None)
+
     try:
-        clip = TextClip(**textclip_kwargs)
+        clip = TextClip(text, **textclip_kwargs)
     except TypeError as exc:
         if 'font' in str(exc).lower() and 'font' in textclip_kwargs:
             textclip_kwargs.pop('font')
             try:
-                clip = TextClip(**textclip_kwargs)
+                clip = TextClip(text, **textclip_kwargs)
+            except Exception as retry_exc:  # pragma: no cover - runtime dependency
+                print(f"[SKIP] Caption render failed: {retry_exc}")
+                return None
+        elif 'txt' in str(exc).lower():
+            textclip_kwargs.pop('txt', None)
+            try:
+                clip = TextClip(text, **textclip_kwargs)
             except Exception as retry_exc:  # pragma: no cover - runtime dependency
                 print(f"[SKIP] Caption render failed: {retry_exc}")
                 return None
@@ -347,17 +356,35 @@ composite.write_videofile(
     audio=True,
 )
 
-safe_close_clip(composite)
-safe_close_clip(base_clip)
-if base_clip is not source_clip:
-    safe_close_clip(source_clip)
-else:
-    safe_close_clip(source_clip)
-for layer in layers_v:
-    if layer not in (base_clip, composite):
-        safe_close_clip(layer)
+# release resources before FFmpeg step
+seen_ids = set()
+for clip in layers_v + [base_clip, composite]:
+    clip_id = id(clip)
+    if clip_id in seen_ids:
+        continue
+    seen_ids.add(clip_id)
+    safe_close_clip(clip)
+
+seen_ids.clear()
 for audio_layer in layers_a:
+    clip_id = id(audio_layer)
+    if clip_id in seen_ids:
+        continue
+    seen_ids.add(clip_id)
     safe_close_clip(audio_layer)
+
+safe_close_clip(source_clip)
+
+def remove_with_retry(path: Path, attempts: int = 3, delay: float = 0.3) -> None:
+    for attempt in range(attempts):
+        try:
+            path.unlink()
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                print(f'[WARN] Could not remove temporary file: {path}')
+            else:
+                time.sleep(delay)
 
 if needs_audio_filters:
     ffmpeg_cmd = [
@@ -373,8 +400,7 @@ if needs_audio_filters:
     ]
     print(f'[AUDIO] Post-processing audio with FFmpeg filters: {audio_filter_chain}')
     subprocess.run(ffmpeg_cmd, check=True)
-    os.remove(export_path)
+    remove_with_retry(export_path)
     print(f'[AUDIO] Filtered audio written to {output_path}')
 
 print('[DONE] Finished rendering.')
-
