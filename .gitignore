@@ -1,3 +1,4 @@
 # Ignore raw inputs and generated outputs
-inputs/
-outputs/
+.env
+*.mp4
+*.srt

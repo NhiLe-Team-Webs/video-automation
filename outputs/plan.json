@@ -1,0 +1,363 @@
+{
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 19.88,
+      "timeline_start": 0.0
+    },
+    {
+      "start": 19.88,
+      "end": 39.64,
+      "timeline_start": 19.88
+    },
+    {
+      "start": 39.64,
+      "end": 57.92,
+      "timeline_start": 39.64
+    },
+    {
+      "start": 57.92,
+      "end": 76.16,
+      "timeline_start": 57.92
+    },
+    {
+      "start": 76.16,
+      "end": 97.6,
+      "timeline_start": 76.16
+    },
+    {
+      "start": 97.6,
+      "end": 113.12,
+      "timeline_start": 97.6
+    },
+    {
+      "start": 113.12,
+      "end": 139.48,
+      "timeline_start": 113.12
+    },
+    {
+      "start": 139.48,
+      "end": 153.52,
+      "timeline_start": 139.48
+    },
+    {
+      "start": 153.52,
+      "end": 171.76,
+      "timeline_start": 153.52
+    },
+    {
+      "start": 171.76,
+      "end": 204.96,
+      "timeline_start": 171.76
+    },
+    {
+      "start": 204.96,
+      "end": 215.36,
+      "timeline_start": 204.96
+    },
+    {
+      "start": 215.36,
+      "end": 238.42,
+      "timeline_start": 215.36
+    },
+    {
+      "start": 238.42,
+      "end": 266.14,
+      "timeline_start": 238.42
+    },
+    {
+      "start": 266.14,
+      "end": 291.5,
+      "timeline_start": 266.14
+    },
+    {
+      "start": 291.5,
+      "end": 305.22,
+      "timeline_start": 291.5
+    },
+    {
+      "start": 305.22,
+      "end": 395.02,
+      "timeline_start": 305.22
+    },
+    {
+      "start": 395.02,
+      "end": 414.02,
+      "timeline_start": 395.02
+    },
+    {
+      "start": 414.02,
+      "end": 442.86,
+      "timeline_start": 414.02
+    },
+    {
+      "start": 442.86,
+      "end": 471.9,
+      "timeline_start": 442.86
+    },
+    {
+      "start": 471.9,
+      "end": 501.74,
+      "timeline_start": 471.56
+    },
+    {
+      "start": 501.86,
+      "end": 527.14,
+      "timeline_start": 501.4
+    },
+    {
+      "start": 527.14,
+      "end": 533.14,
+      "timeline_start": 526.68
+    }
+  ],
+  "actions": [
+    {
+      "type": "zoom",
+      "start": 12.12,
+      "end": 15.12,
+      "scale": 1.15,
+      "source_start": 12.12,
+      "source_end": 15.12
+    },
+    {
+      "type": "zoom",
+      "start": 37.5,
+      "end": 39.5,
+      "scale": 1.15,
+      "source_start": 37.5,
+      "source_end": 39.5
+    },
+    {
+      "type": "zoom",
+      "start": 45.0,
+      "end": 47.0,
+      "scale": 1.05,
+      "source_start": 45.0,
+      "source_end": 47.0
+    },
+    {
+      "type": "zoom",
+      "start": 96.0,
+      "end": 97.6,
+      "scale": 1.2,
+      "source_start": 96.0,
+      "source_end": 97.6
+    },
+    {
+      "type": "sfx",
+      "name": "ding.mp3",
+      "start": 97.0
+    },
+    {
+      "type": "zoom",
+      "start": 105.0,
+      "end": 113.12,
+      "scale": 1.15,
+      "source_start": 105.0,
+      "source_end": 113.12
+    },
+    {
+      "type": "sfx",
+      "name": "woosh.mp3",
+      "start": 107.0
+    },
+    {
+      "type": "zoom",
+      "start": 129.5,
+      "end": 132.5,
+      "scale": 1.15,
+      "source_start": 129.5,
+      "source_end": 132.5
+    },
+    {
+      "type": "sfx",
+      "name": "notification.mp3",
+      "start": 130.5
+    },
+    {
+      "type": "zoom",
+      "start": 149.0,
+      "end": 153.52,
+      "scale": 1.2,
+      "source_start": 149.0,
+      "source_end": 153.52
+    },
+    {
+      "type": "zoom",
+      "start": 154.0,
+      "end": 156.0,
+      "scale": 1.2,
+      "source_start": 154.0,
+      "source_end": 156.0
+    },
+    {
+      "type": "zoom",
+      "start": 202.0,
+      "end": 204.96,
+      "scale": 1.25,
+      "source_start": 202.0,
+      "source_end": 204.96
+    },
+    {
+      "type": "sfx",
+      "name": "ding.mp3",
+      "start": 203.0
+    },
+    {
+      "type": "zoom",
+      "start": 235.0,
+      "end": 238.42,
+      "scale": 1.2,
+      "source_start": 235.0,
+      "source_end": 238.42
+    },
+    {
+      "type": "sfx",
+      "name": "woosh.mp3",
+      "start": 236.0
+    },
+    {
+      "type": "zoom",
+      "start": 254.0,
+      "end": 256.0,
+      "scale": 1.15,
+      "source_start": 254.0,
+      "source_end": 256.0
+    },
+    {
+      "type": "zoom",
+      "start": 263.0,
+      "end": 266.14,
+      "scale": 1.25,
+      "source_start": 263.0,
+      "source_end": 266.14
+    },
+    {
+      "type": "sfx",
+      "name": "ding.mp3",
+      "start": 264.0
+    },
+    {
+      "type": "zoom",
+      "start": 288.0,
+      "end": 291.5,
+      "scale": 1.2,
+      "source_start": 288.0,
+      "source_end": 291.5
+    },
+    {
+      "type": "zoom",
+      "start": 296.0,
+      "end": 300.0,
+      "scale": 1.15,
+      "source_start": 296.0,
+      "source_end": 300.0
+    },
+    {
+      "type": "zoom",
+      "start": 372.0,
+      "end": 375.1,
+      "scale": 1.15,
+      "source_start": 372.0,
+      "source_end": 375.1
+    },
+    {
+      "type": "zoom",
+      "start": 387.0,
+      "end": 390.0,
+      "scale": 1.15,
+      "source_start": 387.0,
+      "source_end": 390.0
+    },
+    {
+      "type": "zoom",
+      "start": 407.0,
+      "end": 414.02,
+      "scale": 1.25,
+      "source_start": 407.0,
+      "source_end": 414.02
+    },
+    {
+      "type": "sfx",
+      "name": "applause.mp3",
+      "start": 412.0
+    },
+    {
+      "type": "zoom",
+      "start": 435.0,
+      "end": 438.0,
+      "scale": 1.15,
+      "source_start": 435.0,
+      "source_end": 438.0
+    },
+    {
+      "type": "caption",
+      "start": 449.0,
+      "end": 450.78,
+      "text": "DO HARD THINGS EVERY DAY"
+    },
+    {
+      "type": "sfx",
+      "name": "ding.mp3",
+      "start": 449.5
+    },
+    {
+      "type": "zoom",
+      "start": 466.66,
+      "end": 469.66,
+      "scale": 1.25,
+      "source_start": 467.0,
+      "source_end": 470.0
+    },
+    {
+      "type": "sfx",
+      "name": "applause.mp3",
+      "start": 468.0
+    },
+    {
+      "type": "zoom",
+      "start": 496.66,
+      "end": 501.4,
+      "scale": 1.2,
+      "source_start": 497.0,
+      "source_end": 501.74
+    },
+    {
+      "type": "sfx",
+      "name": "ding.mp3",
+      "start": 498.66
+    },
+    {
+      "type": "zoom",
+      "start": 547.16,
+      "end": 550.66,
+      "scale": 1.3,
+      "source_start": 547.5,
+      "source_end": 551.0
+    },
+    {
+      "type": "sfx",
+      "name": "ding.mp3",
+      "start": 547.66
+    },
+    {
+      "type": "sfx",
+      "name": "applause.mp3",
+      "start": 552.56
+    }
+  ],
+  "audio": {
+    "filters": {
+      "highpass_hz": 120.0,
+      "lowpass_hz": null
+    }
+  },
+  "meta": {
+    "style": "motivational",
+    "notes": [
+      "Trimmed pauses exceeding 0.7s (total 0.34s trimmed at one point).",
+      "Motivational peaks receive stronger emphasis via zooms and SFX."
+    ]
+  }
+}

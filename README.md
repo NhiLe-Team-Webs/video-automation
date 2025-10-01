@@ -112,6 +112,14 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+### Optional: Configure Gemini API Key
+
+1. Copy `.env.example` to `.env`.
+2. Add `GEMINI_API_KEY=your_key` inside `.env`.
+3. Optionally set `GEMINI_MODEL` to choose a different Gemini model.
+
+> This enables the experimental LLM planner (`scripts/make_plan_gemini.py`).
+
 ### 4️⃣ Install FFmpeg
 
 <details>
@@ -231,6 +239,8 @@ chmod +x run_all.sh
 ./run_all.sh
 ```
 
+> Default: script tries `make_plan_gemini.py` first; on missing Gemini key or API error it falls back to `make_plan_from_srt.py` with `plan/mapping.json`.
+
 ---
 
 ### 🔧 Step-by-Step Execution
@@ -260,6 +270,8 @@ python scripts/make_plan_from_srt.py \
   plan/mapping.json \
   outputs/plan.json
 ```
+
+> **LLM option:** `python scripts/make_plan_gemini.py outputs/stage1_cut.srt outputs/plan_gemini.json`
 
 #### Step 4: Apply Effects
 ```bash
