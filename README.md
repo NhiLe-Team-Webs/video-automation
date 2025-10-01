@@ -112,6 +112,14 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+### Optional: Configure Gemini API Key
+
+1. Copy `.env.example` to `.env`.
+2. Add `GEMINI_API_KEY=your_key` inside `.env`.
+3. Optionally set `GEMINI_MODEL` to choose a different Gemini model.
+
+> This enables the experimental LLM planner (`scripts/make_plan_gemini.py`).
+
 ### 4️⃣ Install FFmpeg
 
 <details>
@@ -171,24 +179,48 @@ assets/
 
 ### Configure Mapping
 
-Edit `plan/mapping.json` to define keyword triggers:
+Edit `plan/mapping.json` to describe how the script cleans filler words, merges clips, and injects creative beats. Key sections:
+
+* `filler_detection` – phrases to trim plus ratio & minimum-duration thresholds.
+* `segmenting` – silence merge gap and fallback minimum duration.
+* `defaults` – baseline cooldowns and zoom scale for rules that omit explicit values.
+* `audio` – high/low pass or other ffmpeg-friendly filters.
+* `transitions.rules` – optional conditional transitions with gap windows, keyword scopes, and offsets.
+* `actions.sfx` / `actions.zoom` – rich matching logic using `match_type` (`contains`, `token`, `regex`, etc.) and `scope` (`entry`, `segment`, `either`, `both`).
+
+Example:
 
 ```json
 {
-  "keywords_to_remove": ["um", "uh", "like", "you know"],
-  "keywords_to_sfx": {
-    "applause": "sfx/applause.mp3",
-    "notification": "sfx/notification.mp3",
-    "shocking": "sfx/shocking.mp3"
+  "filler_detection": {
+    "phrases": ["um", "uh", "like", "you know"],
+    "ratio_threshold": 0.55,
+    "min_duration": 1.0
   },
-  "keywords_to_zoom": ["important", "note", "key point"],
-  "keywords_to_broll": {
-    "office": "broll/office.mp4",
-    "typing": "broll/typing.mp4"
-  },
-  "default_transition": "transition/fade.mov"
+  "actions": {
+    "sfx": [
+      {
+        "name": "question ping",
+        "asset": "sfx/ding.mp3",
+        "match_type": "regex",
+        "scope": "segment",
+        "keywords": {"any": ["\\b(what|why|how|when)\\b"]},
+        "offset": 0.05
+      }
+    ],
+    "zoom": [
+      {
+        "name": "key insight",
+        "keywords": {"any": ["important", "key point"]},
+        "min_duration": 2.0,
+        "scale": 1.2
+      }
+    ]
+  }
 }
 ```
+
+Add additional rules to taste—each rule can set custom cooldowns, offsets, scopes, and `keywords.none` exclusions to fine-tune pro-level timing.
 
 ---
 
@@ -206,6 +238,10 @@ Edit `plan/mapping.json` to define keyword triggers:
 chmod +x run_all.sh
 ./run_all.sh
 ```
+
+> Tip: If your source video uses AV1 (or any slower-to-decode codec), transcode to H.264 first for much faster auto-editor processing: `ffmpeg -i inputs/1.mp4 -c:v libx264 -preset fast -crf 20 -c:a copy inputs/1_h264.mp4`.
+
+> Default: script tries `make_plan_gemini.py` first; on missing Gemini key or API error it falls back to `make_plan_from_srt.py` with `plan/mapping.json`.
 
 ---
 
@@ -236,6 +272,8 @@ python scripts/make_plan_from_srt.py \
   plan/mapping.json \
   outputs/plan.json
 ```
+
+> **LLM option:** `python scripts/make_plan_gemini.py outputs/stage1_cut.srt outputs/plan_gemini.json`
 
 #### Step 4: Apply Effects
 ```bash

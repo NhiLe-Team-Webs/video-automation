@@ -1,0 +1,5 @@
+# Ignore raw inputs and generated outputs
+.env
+*.mp4
+*.srt
+plan.json
