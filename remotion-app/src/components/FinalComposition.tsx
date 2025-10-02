@@ -66,10 +66,10 @@ export const FinalComposition: React.FC<FinalCompositionProps> = ({
 
   if (!activePlan) {
     if (status === 'error') {
-      return <LoadingState message={error ?? 'Không thể tải kế hoạch dựng video.'} />;
+      return <LoadingState message={error ?? 'Unable to load the editing plan.'} />;
     }
 
-    return <LoadingState message="Đang tải kế hoạch dựng video..." />;
+    return <LoadingState message="Loading editing plan..." />;
   }
 
   const sanitizedHighlights = activePlan.highlights.filter((highlight) => highlight.duration > 0);
