@@ -77,8 +77,8 @@ Plan khớp với schema Remotion (`remotion-app/src/data/planSchema.ts`):
 ```
 
 - `sourceStart` và `duration` được tính theo giây của video đã trim (`input.mp4`).
-- `transitionIn`/`transitionOut` hỗ trợ các `type`: `cut`, `crossfade`, `slide` (slide có thể thêm `direction`: `left|right|up|down`).
-- Highlight mặc định xoay vòng animation (`fade/zoom/slide`) và chọn vị trí (`center/bottom/top`). Nếu rule SFX có `volume`, giá trị được giữ lại (0–1).
+- `transitionIn`/`transitionOut` hỗ trợ các `type`: `cut`, `crossfade`, `slide`, `zoom`, `scale`, `rotate`, `blur` (slide có thể thêm `direction`: `left|right|up|down`; zoom/scale/rotate/blur có thể thiết lập `intensity` ~0.1–0.35).
+- Highlight mặc định xoay vòng animation (`fade/zoom/slide/bounce/float/flip`) và chọn vị trí (`center/bottom/top`). Nếu rule SFX có `volume`, giá trị được giữ lại (0–1).
 
 ## 🤖 Gemini Planner (tuỳ chọn)
 

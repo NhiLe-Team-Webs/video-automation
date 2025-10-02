@@ -8,34 +8,78 @@ const POSITION_STYLES: Record<HighlightPosition, CSSProperties> = {
   bottom: {justifyContent: 'flex-end', paddingBottom: 120},
 };
 
+const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
+
 const animationTransform = (
   animation: HighlightAnimation,
   appear: number,
   exit: number,
   theme: HighlightTheme | undefined
 ): CSSProperties => {
+  const appearProgress = clamp01(appear);
+  const exitProgress = clamp01(exit);
+  const exitNormalized = 1 - exitProgress;
+  const accent = theme?.accentColor ?? '#ffcf5c';
+
   if (animation === 'zoom') {
-    const scale = interpolate(appear, [0, 1], [0.85, 1], {
+    const scale = interpolate(appearProgress, [0, 1], [0.82, 1.02], {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     });
-    const disappearScale = interpolate(exit, [0, 1], [0.95, 1], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    });
+    const disappearScale = 1 - exitNormalized * 0.12;
     return {transform: `scale(${scale * disappearScale})`};
   }
 
   if (animation === 'slide') {
-    const translate = interpolate(appear, [0, 1], [40, 0], {
+    const enterTranslate = interpolate(appearProgress, [0, 1], [50, 0], {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     });
-    const exitTranslate = interpolate(exit, [0, 1], [0, -40], {
+    const exitTranslate = interpolate(exitNormalized, [0, 1], [0, -60], {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     });
-    return {transform: `translateY(${translate + exitTranslate}px)`};
+    return {transform: `translateY(${enterTranslate + exitTranslate}px)`};
+  }
+
+  if (animation === 'bounce') {
+    const bounce = Math.sin(appearProgress * Math.PI);
+    const lift = -bounce * 32 * exitProgress;
+    const scale = 1 + bounce * 0.18;
+    const settleScale = 1 - exitNormalized * 0.15;
+    return {
+      transform: `translateY(${lift}px) scale(${scale * settleScale})`,
+      filter: `drop-shadow(0 18px 30px rgba(0,0,0,0.25)) drop-shadow(0 0 26px ${accent})`,
+    };
+  }
+
+  if (animation === 'float') {
+    const driftX = Math.sin(appearProgress * Math.PI * 1.5) * 18 * exitProgress;
+    const driftY = -interpolate(appearProgress, [0, 1], [0, 48], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    }) * exitProgress;
+    const shimmer = 1 + Math.sin((appearProgress + exitNormalized) * Math.PI) * 0.05;
+    return {
+      transform: `translate(${driftX}px, ${driftY}px) scale(${shimmer})`,
+      filter: `drop-shadow(0 18px 30px rgba(0,0,0,0.25)) drop-shadow(0 0 32px ${accent}) saturate(${1 + appearProgress * 0.2})`,
+    };
+  }
+
+  if (animation === 'flip') {
+    const rotate = interpolate(appearProgress, [0, 1], [-80, 0], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    const exitRotate = interpolate(exitNormalized, [0, 1], [0, 50], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    const scale = 1 - exitNormalized * 0.1;
+    return {
+      transform: `perspective(1400px) rotateX(${rotate + exitRotate}deg) scale(${scale})`,
+      transformStyle: 'preserve-3d',
+    };
   }
 
   return {};
@@ -93,9 +137,11 @@ export const HighlightCallout: React.FC<HighlightCalloutProps> = ({
     fontSize: 52,
     lineHeight: 1.2,
     maxWidth: '70%',
-    boxShadow: '0 22px 60px rgba(0, 0, 0, 0.35)',
+    boxShadow: '0 22px 60px rgba(0, 0, 0, 0.35), 0 0 38px rgba(255, 207, 92, 0.45)',
     opacity,
     ...transformStyle,
+    transformOrigin: 'center',
+    backfaceVisibility: 'hidden',
   };
 
   return (

@@ -1,4 +1,11 @@
-export type TransitionType = 'cut' | 'crossfade' | 'slide';
+export type TransitionType =
+  | 'cut'
+  | 'crossfade'
+  | 'slide'
+  | 'zoom'
+  | 'scale'
+  | 'rotate'
+  | 'blur';
 
 export type TransitionDirection = 'left' | 'right' | 'up' | 'down';
 
@@ -6,6 +13,7 @@ export interface TransitionPlan {
   type: TransitionType;
   duration?: number;
   direction?: TransitionDirection;
+  intensity?: number;
 }
 
 export interface SegmentPlan {
@@ -20,7 +28,7 @@ export interface SegmentPlan {
 
 export type HighlightPosition = 'top' | 'center' | 'bottom';
 
-export type HighlightAnimation = 'fade' | 'zoom' | 'slide';
+export type HighlightAnimation = 'fade' | 'zoom' | 'slide' | 'bounce' | 'float' | 'flip';
 
 export interface HighlightPlan {
   id: string;

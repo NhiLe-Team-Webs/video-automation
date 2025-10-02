@@ -67,10 +67,10 @@ def _build_sfx_lookup() -> Dict[str, str]:
 
 
 SFX_LOOKUP = _build_sfx_lookup()
-TRANSITION_TYPES = ["cut", "crossfade", "slide"]
+TRANSITION_TYPES = ["cut", "crossfade", "slide", "zoom", "scale", "rotate", "blur"]
 TRANSITION_DIRECTIONS = ["left", "right", "up", "down"]
 HIGHLIGHT_POSITIONS = ["top", "center", "bottom"]
-HIGHLIGHT_ANIMATIONS = ["fade", "zoom", "slide"]
+HIGHLIGHT_ANIMATIONS = ["fade", "zoom", "slide", "bounce", "float", "flip"]
 MAX_HIGHLIGHTS = 6
 DEFAULT_HIGHLIGHT_DURATION = 2.6
 
@@ -176,7 +176,11 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         f"{json.dumps(schema_hint, indent=2)}\n\n"
         "Rules:\n"
         "- `segments` chứa các đoạn theo timeline với `sourceStart` (giây trong video gốc) và `duration`. Có thể thêm `label` mô tả ngắn.\n"
-        "- `transitionIn`/`transitionOut` dùng `type` thuộc: " + transition_types + "; nếu `type` là `slide` có thể thêm `direction`: " + transition_directions + ".\n"
+        "- `transitionIn`/`transitionOut` dùng `type` thuộc: "
+        + transition_types
+        + "; nếu `type` là `slide` có thể thêm `direction`: "
+        + transition_directions
+        + "; với `zoom`/`scale`/`rotate`/`blur` có thể set `intensity` trong khoảng 0.1-0.35 để kiểm soát độ mạnh.\n"
         "- Trim/merge câu khi khoảng lặng > ~0.7s trừ khi cần giữ nhịp cảm xúc.\n"
         f"- Chỉ tạo tối đa {MAX_HIGHLIGHTS} highlight mạnh nhất. Duy trì mỗi highlight 2-4s.\n"
         "- `highlights` gồm `text`, `start`, `duration`, `position` (" + highlight_positions + "), `animation` (" + highlight_animations + "), và `sfx` nếu cần.\n"
@@ -252,6 +256,7 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
     transition_type = None
     direction = None
     duration_value = None
+    intensity_value = None
 
     if isinstance(value, str):
         transition_type = value.lower()
@@ -259,6 +264,7 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
         transition_type = (value.get("type") or value.get("style") or "").lower()
         direction = (value.get("direction") or value.get("dir") or "").lower() or None
         duration_value = ensure_float(value.get("duration", value.get("length", 0.0)), 0.0)
+        intensity_value = ensure_float(value.get("intensity", value.get("strength", 0.0)), 0.0)
     else:
         return None
 
@@ -271,6 +277,15 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
                 break
         transition_type = "slide"
 
+    elif transition_type in {"zoom-in", "zoom-out", "push", "push-in", "push-out", "punch", "punch-in", "punch-out"}:
+        transition_type = "zoom"
+    elif transition_type in {"scale-up", "scale-down", "grow", "shrink"}:
+        transition_type = "scale"
+    elif transition_type in {"spin", "twist", "turn"}:
+        transition_type = "rotate"
+    elif transition_type in {"focus", "defocus", "dream", "soft-focus", "soften"}:
+        transition_type = "blur"
+
     if transition_type not in TRANSITION_TYPES:
         transition_type = "cut"
 
@@ -280,6 +295,11 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
     duration_value = duration_value if duration_value and duration_value > 0 else 0.6
     duration_value = max(0.1, min(duration_value, 3.0))
 
+    if intensity_value is not None and intensity_value <= 0:
+        intensity_value = None
+    if intensity_value is not None:
+        intensity_value = round(max(0.05, min(float(intensity_value), 0.6)), 3)
+
     transition: Dict[str, Any] = {
         "type": transition_type,
         "duration": round(duration_value, 3),
@@ -287,6 +307,9 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
 
     if transition_type == "slide" and direction in TRANSITION_DIRECTIONS:
         transition["direction"] = direction
+
+    if transition_type in {"zoom", "scale", "rotate", "blur"} and intensity_value:
+        transition["intensity"] = intensity_value
 
     return transition
 
