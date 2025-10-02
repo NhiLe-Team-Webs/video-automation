@@ -49,10 +49,10 @@ export const FinalComposition: React.FC<FinalCompositionProps> = ({
   highlightTheme,
 }) => {
   const {fps} = useVideoConfig();
-  const shouldLoad = !plan;
-  const {plan: loadedPlan, status, error} = usePlan(planPath, {enabled: shouldLoad});
+  const shouldLoadPlan = Boolean(planPath);
+  const {plan: loadedPlan, status, error} = usePlan(planPath, {enabled: shouldLoadPlan});
 
-  const activePlan = plan ?? loadedPlan;
+  const activePlan = loadedPlan ?? plan ?? null;
 
   const metadata = useMemo(() => {
     if (!activePlan) {

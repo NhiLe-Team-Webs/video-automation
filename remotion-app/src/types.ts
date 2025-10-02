@@ -46,7 +46,7 @@ export interface HighlightTheme {
 }
 
 export interface FinalCompositionProps {
-  plan?: Plan;
+  plan?: Plan | null;
   planPath?: string;
   inputVideo?: string;
   fallbackTransitionDuration?: number;
