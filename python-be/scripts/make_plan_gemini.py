@@ -16,13 +16,57 @@ from dotenv import load_dotenv
 TIMECODE_RE = re.compile(r"^(?P<start>\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(?P<end>\d{2}:\d{2}:\d{2},\d{3})$")
 JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
-AVAILABLE_SFX: Dict[str, str] = {
-    "pop.mp3": "Pop UI hit cho moment vui tươi",
-    "whoosh.wav": "Whoosh chuyển cảnh mượt",
-    "ding.mp3": "Ding sạch cho số liệu quan trọng",
-    "applause.mp3": "Applause nhanh cho thành tựu",
-    "camera-click.mp3": "Tiếng chụp ảnh nhấn mạnh demo",
+SFX_EXTENSIONS = {".mp3", ".wav", ".ogg"}
+
+
+def _humanize_sfx_description(relative_path: Path) -> str:
+    category = relative_path.parent.name if relative_path.parent != Path(".") else "mix"
+    base = relative_path.stem.replace("-", " ").replace("_", " ")
+    category_title = category.replace("-", " ").replace("_", " ").title()
+    base_title = base.title()
+    return f"{category_title}: {base_title}"
+
+
+def discover_available_sfx() -> Dict[str, str]:
+    root_dir = Path(__file__).resolve().parents[2]
+    sfx_dir = root_dir / "remotion-app" / "public" / "sfx"
+    available: Dict[str, str] = {}
+
+    if not sfx_dir.exists():
+        return available
+
+    for asset in sorted(sfx_dir.rglob("*")):
+        if not asset.is_file() or asset.suffix.lower() not in SFX_EXTENSIONS:
+            continue
+        relative_path = asset.relative_to(sfx_dir)
+        key = relative_path.as_posix()
+        available[key] = _humanize_sfx_description(relative_path)
+
+    return available
+
+
+AVAILABLE_SFX: Dict[str, str] = discover_available_sfx() or {
+    "ui/pop.mp3": "UI: Pop punchy nhấn mạnh",
+    "whoosh/whoosh.mp3": "Whoosh chuyển cảnh mượt",
+    "emphasis/ding.mp3": "Ding sạch cho số liệu quan trọng",
+    "emotion/applause.mp3": "Applause nhanh cho thành tựu",
+    "tech/camera-click.mp3": "Tiếng chụp ảnh nhấn mạnh demo",
 }
+
+
+def _build_sfx_lookup() -> Dict[str, str]:
+    lookup: Dict[str, str] = {}
+    for key in AVAILABLE_SFX.keys():
+        lower_key = key.lower()
+        lookup.setdefault(lower_key, key)
+        name = Path(key).name.lower()
+        lookup.setdefault(name, key)
+        stem = Path(key).stem.lower()
+        lookup.setdefault(stem, key)
+    return lookup
+
+
+SFX_LOOKUP = _build_sfx_lookup()
 TRANSITION_TYPES = ["cut", "crossfade", "slide"]
 TRANSITION_DIRECTIONS = ["left", "right", "up", "down"]
 HIGHLIGHT_POSITIONS = ["top", "center", "bottom"]
@@ -106,7 +150,7 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
                 "duration": 2.6,
                 "position": "center",
                 "animation": "zoom",
-                "sfx": "pop.mp3",
+                "sfx": "ui/pop.mp3",
                 "volume": 0.75,
             }
         ],
@@ -136,7 +180,11 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         "- Trim/merge câu khi khoảng lặng > ~0.7s trừ khi cần giữ nhịp cảm xúc.\n"
         f"- Chỉ tạo tối đa {MAX_HIGHLIGHTS} highlight mạnh nhất. Duy trì mỗi highlight 2-4s.\n"
         "- `highlights` gồm `text`, `start`, `duration`, `position` (" + highlight_positions + "), `animation` (" + highlight_animations + "), và `sfx` nếu cần.\n"
-        "- SFX phải chọn từ thư viện public/sfx với tên file: " + sfx_names + ". Gợi ý: " + sfx_notes + "\n"
+        "- SFX phải chọn từ thư viện public/sfx với path tương đối (vd: ui/pop.mp3). Danh sách: "
+        + sfx_names
+        + ". Gợi ý: "
+        + sfx_notes
+        + "\n"
         "- Nếu highlight có SFX, đặt `start` khớp moment cần nhấn và cân nhắc `volume` (0-1).\n"
         "- Đảm bảo các segment nối tiếp nhau không bị gap thời gian.\n"
         "- Chỉ trả về JSON trong một code block.\n\n"
@@ -177,14 +225,24 @@ def normalize_sfx_name(value: Any) -> str | None:
     candidate = str(value).strip()
     if not candidate:
         return None
-    filename = Path(candidate).name
-    if not filename:
-        return None
-    lower = filename.lower()
-    for name in AVAILABLE_SFX.keys():
-        if name.lower() == lower:
-            return name
-    return filename
+    candidate_normalized = candidate.replace("\\", "/").lstrip("./")
+    if candidate_normalized.startswith("sfx/"):
+        candidate_normalized = candidate_normalized[4:]
+
+    checks = [
+        candidate_normalized.lower(),
+        Path(candidate_normalized).name.lower(),
+        Path(candidate_normalized).stem.lower(),
+    ]
+
+    for key in checks:
+        if not key:
+            continue
+        match = SFX_LOOKUP.get(key)
+        if match:
+            return match
+
+    return None
 
 
 def normalize_transition(value: Any) -> Dict[str, Any] | None:

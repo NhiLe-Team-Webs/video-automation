@@ -101,7 +101,7 @@ export const planExample: Plan = {
       duration: 4,
       position: 'center',
       animation: 'zoom',
-      sfx: 'pop.mp3',
+      sfx: 'ui/pop.mp3',
     },
     {
       id: 'stat',
@@ -110,7 +110,7 @@ export const planExample: Plan = {
       duration: 5,
       position: 'bottom',
       animation: 'slide',
-      sfx: 'whoosh.wav',
+      sfx: 'whoosh/whoosh.mp3',
     },
   ],
 };

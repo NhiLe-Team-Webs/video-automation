@@ -16,7 +16,7 @@ Bộ script trong thư mục `python-be/` chịu trách nhiệm chuẩn hóa vid
 2. **Đặt dữ liệu đầu vào**
    - Video gốc: `python-be/inputs/input.mp4` (có thể truyền đường dẫn khác khi chạy script).
    - Nếu muốn dùng Gemini để lập kế hoạch: tạo `.env` với `GEMINI_API_KEY=...` (tùy chọn `GEMINI_MODEL`).
-   - SFX dùng trong highlight phải tồn tại trong `remotion-app/public/sfx/` với tên file trùng khớp (ví dụ `pop.mp3`, `whoosh.wav`).
+   - SFX dùng trong highlight phải tồn tại trong `remotion-app/public/sfx/` với path tương đối chuẩn (ví dụ `ui/pop.mp3`, `whoosh/whoosh.mp3`).
 
 3. **Chạy toàn bộ pipeline**
    ```bash
@@ -70,7 +70,7 @@ Plan khớp với schema Remotion (`remotion-app/src/data/planSchema.ts`):
       "duration": 2.6,
       "position": "center",
       "animation": "zoom",
-      "sfx": "ding.mp3"
+      "sfx": "emphasis/ding.mp3"
     }
   ]
 }
@@ -106,7 +106,7 @@ Plan khớp với schema Remotion (`remotion-app/src/data/planSchema.ts`):
 
 - **Thiếu `stage1_cut.srt`**: kiểm tra Whisper đã cài thành công (`pip install -r requirements.txt`) và có GPU/CPU hỗ trợ.
 - **Plan không có highlight**: đảm bảo rule SFX trong `mapping.json` khớp transcript, hoặc thêm hướng dẫn khi gọi Gemini.
-- **Render Remotion lỗi vì thiếu SFX**: chắc chắn tên file SFX trong `plan.json` tồn tại trong `remotion-app/public/sfx/`.
+- **Render Remotion lỗi vì thiếu SFX**: chắc chắn path SFX trong `plan.json` (vd `ui/pop.mp3`) tồn tại trong `remotion-app/public/sfx/`.
 - **Muốn debug kế hoạch**: mở `outputs/plan.json` để xem dữ liệu trước khi Remotion đọc.
 
 Bộ script giờ đã khớp hoàn toàn với Remotion pipeline – chỉ cần chạy `run_all`, sau đó render trong `remotion-app` là có thể xuất `final.mp4` với segment, transition, highlight và SFX đồng bộ.

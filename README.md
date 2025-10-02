@@ -43,13 +43,13 @@ Hệ thống này dựng video tự động dựa trên Remotion, MoviePy, Auto-
       "duration": 4,
       "position": "center",
       "animation": "zoom",
-      "sfx": "pop.mp3"
+      "sfx": "ui/pop.mp3"
     }
   ]
 }
 ```
 
-3. Đặt các hiệu ứng âm thanh trong `remotion-app/public/sfx/` (ví dụ `pop.mp3`). Pipeline Python sẽ giữ nguyên tên file SFX khi sinh highlight.
+3. Đặt các hiệu ứng âm thanh trong `remotion-app/public/sfx/` (ví dụ `ui/pop.mp3`). Pipeline Python sẽ giữ nguyên path SFX tương đối khi sinh highlight.
 
 > **Lưu ý:** Mặc định composition dùng `planExample` trong code để preview. Khi render dữ liệu thực tế hãy truyền props để dùng `plan.json`:
 >
