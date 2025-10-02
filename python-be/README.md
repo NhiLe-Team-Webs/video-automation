@@ -1,10 +1,10 @@
 # 🎬 Python Backend Toolkit
 
-Bộ script trong thư mục `python-be/` chịu trách nhiệm chuẩn hóa video gốc, tạo transcript và sinh `plan.json` đúng với flow Remotion hiện tại. Output cuối sẽ được copy sang `remotion-app/public/` để Remotion render tự động.
+The scripts inside `python-be/` normalize your source footage, generate transcripts, and create a Remotion-ready `plan.json`. The resulting assets are copied into `remotion-app/public/` so the Remotion project can render automatically.
 
-## 🚀 Quy trình nhanh
+## 🚀 Quick start workflow
 
-1. **Chuẩn bị môi trường**
+1. **Set up the environment**
    ```bash
    cd python-be
    python -m venv .venv
@@ -13,36 +13,36 @@ Bộ script trong thư mục `python-be/` chịu trách nhiệm chuẩn hóa vid
    pip install -r requirements.txt
    ```
 
-2. **Đặt dữ liệu đầu vào**
-   - Video gốc: `python-be/inputs/input.mp4` (có thể truyền đường dẫn khác khi chạy script).
-   - Nếu muốn dùng Gemini để lập kế hoạch: tạo `.env` với `GEMINI_API_KEY=...` (tùy chọn `GEMINI_MODEL`).
-   - SFX dùng trong highlight phải tồn tại trong `remotion-app/public/sfx/` với path tương đối chuẩn (ví dụ `ui/pop.mp3`, `whoosh/whoosh.mp3`).
+2. **Provide the inputs**
+   - Source video: `python-be/inputs/input.mp4` (you can pass a different path when running the script).
+   - Gemini planning (optional): create a `.env` file with `GEMINI_API_KEY=...` (and optionally `GEMINI_MODEL`).
+   - Highlight SFX must exist in `remotion-app/public/sfx/` with the exact relative path (for example `ui/pop.mp3`, `whoosh/whoosh.mp3`).
 
-3. **Chạy toàn bộ pipeline**
+3. **Run the full pipeline**
    ```bash
    # macOS/Linux
-   ./run_all.sh                     # hoặc ./run_all.sh path/to/video.mp4
+   ./run_all.sh                     # or ./run_all.sh path/to/video.mp4
 
    :: Windows
-   run_all.bat                      # hoặc run_all.bat path\to\video.mp4
+   run_all.bat                      # or run_all.bat path\to\video.mp4
    ```
 
-   Script sẽ:
-   - Auto-Editor: cắt khoảng lặng → `outputs/stage1_cut.mp4`.
-   - Whisper: tạo transcript SRT → `outputs/stage1_cut.srt`.
-   - Sinh `plan.json` (ưu tiên Gemini, fallback mapping tĩnh).
-   - Copy `stage1_cut.mp4` và `plan.json` vào `remotion-app/public/` với tên `input.mp4` và `plan.json`.
+   The script performs the following:
+   - Auto-Editor removes silence → `outputs/stage1_cut.mp4`.
+   - Whisper generates an SRT transcript → `outputs/stage1_cut.srt`.
+   - A planning step produces `plan.json` (Gemini first, static mapping fallback).
+   - Copies `stage1_cut.mp4` and `plan.json` into `remotion-app/public/` as `input.mp4` and `plan.json`.
 
-4. **Render bằng Remotion**
+4. **Render with Remotion**
    ```bash
    cd ../remotion-app
    npm install
-   npm run render                   # sinh out/final.mp4
+   npm run render                   # produces out/final.mp4
    ```
 
-## 📄 Cấu trúc `plan.json`
+## 📄 `plan.json` structure
 
-Plan khớp với schema Remotion (`remotion-app/src/data/planSchema.ts`):
+The generated plan conforms to the Remotion schema (`remotion-app/src/data/planSchema.ts`):
 
 ```json
 {
@@ -51,7 +51,7 @@ Plan khớp với schema Remotion (`remotion-app/src/data/planSchema.ts`):
       "id": "segment-01",
       "sourceStart": 0.0,
       "duration": 12.5,
-      "label": "Giới thiệu đề bài",
+      "label": "Introduction",
       "transitionOut": {"type": "crossfade", "duration": 0.6}
     },
     {
@@ -65,7 +65,7 @@ Plan khớp với schema Remotion (`remotion-app/src/data/planSchema.ts`):
   "highlights": [
     {
       "id": "highlight-01",
-      "text": "Key insight: tăng trưởng 200%",
+      "text": "Key insight: 200% growth",
       "start": 5.8,
       "duration": 2.6,
       "position": "center",
@@ -76,37 +76,37 @@ Plan khớp với schema Remotion (`remotion-app/src/data/planSchema.ts`):
 }
 ```
 
-- `sourceStart` và `duration` được tính theo giây của video đã trim (`input.mp4`).
-- `transitionIn`/`transitionOut` hỗ trợ các `type`: `cut`, `crossfade`, `slide`, `zoom`, `scale`, `rotate`, `blur` (slide có thể thêm `direction`: `left|right|up|down`; zoom/scale/rotate/blur có thể thiết lập `intensity` ~0.1–0.35).
-- Highlight mặc định xoay vòng animation (`fade/zoom/slide/bounce/float/flip`) và chọn vị trí (`center/bottom/top`). Nếu rule SFX có `volume`, giá trị được giữ lại (0–1).
+- `sourceStart` and `duration` are measured in seconds relative to the trimmed video (`input.mp4`).
+- `transitionIn`/`transitionOut` support the following `type` values: `cut`, `crossfade`, `slide`, `zoom`, `scale`, `rotate`, and `blur`. Slides can include `direction` (`left|right|up|down`); zoom/scale/rotate/blur accept an `intensity` value (≈0.1–0.35).
+- Highlights rotate through animations (`fade/zoom/slide/bounce/float/flip`) and choose a position (`center/bottom/top`). If an SFX rule specifies `volume`, the value is preserved (0–1).
 
-## 🤖 Gemini Planner (tuỳ chọn)
+## 🤖 Gemini planner (optional)
 
-- Script `scripts/make_plan_gemini.py` gửi transcript sang Gemini và normalize về schema trên.
-- Cần biến môi trường `GEMINI_API_KEY` (và tuỳ chọn `GEMINI_MODEL`).
-- Nếu Gemini lỗi, pipeline sẽ tự động fallback `scripts/make_plan_from_srt.py` dựa trên `plan/mapping.json`.
+- `scripts/make_plan_gemini.py` submits the transcript to Gemini and normalizes the response to the schema above.
+- Requires the `GEMINI_API_KEY` environment variable (and optional `GEMINI_MODEL`).
+- If Gemini fails, the pipeline automatically falls back to `scripts/make_plan_from_srt.py`, which uses `plan/mapping.json`.
 
-### Tuỳ chỉnh mapping thủ công
+### Customize the fallback mapping
 
-- `plan/mapping.json` cho phép định nghĩa rule cho segment, transition, SFX.
-- Bạn có thể bổ sung/tinh chỉnh rule để ảnh hưởng tới kết quả fallback.
-- Các highlight fallback sẽ lấy nội dung câu thoại quan trọng và đính SFX theo rule `sfx` phù hợp.
+- `plan/mapping.json` lets you describe rules for segments, transitions, and SFX.
+- Adjust or add rules to influence the fallback output.
+- Fallback highlights pull notable transcript sentences and attach SFX according to the matching `sfx` rule.
 
-## 🧪 Các file trung gian
+## 🧪 Intermediate artifacts
 
-| File | Vai trò |
+| File | Purpose |
 |------|---------|
-| `outputs/stage1_cut.mp4` | Video đã loại bỏ khoảng lặng (được copy sang Remotion). |
-| `outputs/stage1_cut.srt` | Transcript Whisper. |
-| `outputs/plan.json` | Plan cuối cùng (trước khi copy sang Remotion). |
-| `remotion-app/public/input.mp4` | Video đầu vào cho Remotion. |
-| `remotion-app/public/plan.json` | Plan Remotion sử dụng khi render. |
+| `outputs/stage1_cut.mp4` | Silence-trimmed video (copied to Remotion). |
+| `outputs/stage1_cut.srt` | Whisper transcript. |
+| `outputs/plan.json` | Final plan before copying to Remotion. |
+| `remotion-app/public/input.mp4` | Video consumed by Remotion. |
+| `remotion-app/public/plan.json` | Plan consumed by Remotion during rendering. |
 
 ## 🔧 Troubleshooting
 
-- **Thiếu `stage1_cut.srt`**: kiểm tra Whisper đã cài thành công (`pip install -r requirements.txt`) và có GPU/CPU hỗ trợ.
-- **Plan không có highlight**: đảm bảo rule SFX trong `mapping.json` khớp transcript, hoặc thêm hướng dẫn khi gọi Gemini.
-- **Render Remotion lỗi vì thiếu SFX**: chắc chắn path SFX trong `plan.json` (vd `ui/pop.mp3`) tồn tại trong `remotion-app/public/sfx/`.
-- **Muốn debug kế hoạch**: mở `outputs/plan.json` để xem dữ liệu trước khi Remotion đọc.
+- **Missing `stage1_cut.srt`**: confirm Whisper installed correctly (`pip install -r requirements.txt`) and your machine has the required CPU/GPU support.
+- **No highlights in the plan**: ensure the SFX rules in `mapping.json` match transcript keywords or add guidance when invoking Gemini.
+- **Remotion render fails due to missing SFX**: verify each SFX path in `plan.json` (for example `ui/pop.mp3`) exists in `remotion-app/public/sfx/`.
+- **Need to debug the plan**: inspect `outputs/plan.json` before Remotion consumes it.
 
-Bộ script giờ đã khớp hoàn toàn với Remotion pipeline – chỉ cần chạy `run_all`, sau đó render trong `remotion-app` là có thể xuất `final.mp4` với segment, transition, highlight và SFX đồng bộ.
+These scripts align perfectly with the Remotion pipeline—run `run_all`, then render inside `remotion-app` to produce `final.mp4` with synchronized segments, transitions, highlights, and SFX.
