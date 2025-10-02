@@ -570,8 +570,13 @@ def main(argv):
                     highlight_text = collapse_text(entry.get("raw_text") or "")
                     if not highlight_text:
                         highlight_text = "Highlight"
-                    sfx_asset = rule.get("asset")
-                    sfx_name = Path(sfx_asset).name if sfx_asset else None
+                    sfx_asset = (rule.get("asset") or "").strip()
+                    sfx_name = None
+                    if sfx_asset:
+                        normalized_asset = sfx_asset.replace("\\", "/")
+                        if normalized_asset.startswith("sfx/"):
+                            normalized_asset = normalized_asset[4:]
+                        sfx_name = normalized_asset or None
                     start_time = max(0.0, candidate_time)
                     highlight = {
                         "id": f"highlight-{highlight_index + 1:02d}",

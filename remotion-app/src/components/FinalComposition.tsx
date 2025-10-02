@@ -49,10 +49,10 @@ export const FinalComposition: React.FC<FinalCompositionProps> = ({
   highlightTheme,
 }) => {
   const {fps} = useVideoConfig();
-  const shouldLoad = !plan;
-  const {plan: loadedPlan, status, error} = usePlan(planPath, {enabled: shouldLoad});
+  const shouldLoadPlan = Boolean(planPath);
+  const {plan: loadedPlan, status, error} = usePlan(planPath, {enabled: shouldLoadPlan});
 
-  const activePlan = plan ?? loadedPlan;
+  const activePlan = loadedPlan ?? plan ?? null;
 
   const metadata = useMemo(() => {
     if (!activePlan) {
@@ -66,10 +66,10 @@ export const FinalComposition: React.FC<FinalCompositionProps> = ({
 
   if (!activePlan) {
     if (status === 'error') {
-      return <LoadingState message={error ?? 'Không thể tải kế hoạch dựng video.'} />;
+      return <LoadingState message={error ?? 'Unable to load the editing plan.'} />;
     }
 
-    return <LoadingState message="Đang tải kế hoạch dựng video..." />;
+    return <LoadingState message="Loading editing plan..." />;
   }
 
   const sanitizedHighlights = activePlan.highlights.filter((highlight) => highlight.duration > 0);

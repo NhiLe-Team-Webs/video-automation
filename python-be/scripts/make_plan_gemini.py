@@ -16,17 +16,61 @@ from dotenv import load_dotenv
 TIMECODE_RE = re.compile(r"^(?P<start>\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(?P<end>\d{2}:\d{2}:\d{2},\d{3})$")
 JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
-AVAILABLE_SFX: Dict[str, str] = {
-    "pop.mp3": "Pop UI hit cho moment vui tươi",
-    "whoosh.wav": "Whoosh chuyển cảnh mượt",
-    "ding.mp3": "Ding sạch cho số liệu quan trọng",
-    "applause.mp3": "Applause nhanh cho thành tựu",
-    "camera-click.mp3": "Tiếng chụp ảnh nhấn mạnh demo",
+SFX_EXTENSIONS = {".mp3", ".wav", ".ogg"}
+
+
+def _humanize_sfx_description(relative_path: Path) -> str:
+    category = relative_path.parent.name if relative_path.parent != Path(".") else "mix"
+    base = relative_path.stem.replace("-", " ").replace("_", " ")
+    category_title = category.replace("-", " ").replace("_", " ").title()
+    base_title = base.title()
+    return f"{category_title}: {base_title}"
+
+
+def discover_available_sfx() -> Dict[str, str]:
+    root_dir = Path(__file__).resolve().parents[2]
+    sfx_dir = root_dir / "remotion-app" / "public" / "sfx"
+    available: Dict[str, str] = {}
+
+    if not sfx_dir.exists():
+        return available
+
+    for asset in sorted(sfx_dir.rglob("*")):
+        if not asset.is_file() or asset.suffix.lower() not in SFX_EXTENSIONS:
+            continue
+        relative_path = asset.relative_to(sfx_dir)
+        key = relative_path.as_posix()
+        available[key] = _humanize_sfx_description(relative_path)
+
+    return available
+
+
+AVAILABLE_SFX: Dict[str, str] = discover_available_sfx() or {
+    "ui/pop.mp3": "UI: Pop punchy nhấn mạnh",
+    "whoosh/whoosh.mp3": "Whoosh chuyển cảnh mượt",
+    "emphasis/ding.mp3": "Ding sạch cho số liệu quan trọng",
+    "emotion/applause.mp3": "Applause nhanh cho thành tựu",
+    "tech/camera-click.mp3": "Tiếng chụp ảnh nhấn mạnh demo",
 }
-TRANSITION_TYPES = ["cut", "crossfade", "slide"]
+
+
+def _build_sfx_lookup() -> Dict[str, str]:
+    lookup: Dict[str, str] = {}
+    for key in AVAILABLE_SFX.keys():
+        lower_key = key.lower()
+        lookup.setdefault(lower_key, key)
+        name = Path(key).name.lower()
+        lookup.setdefault(name, key)
+        stem = Path(key).stem.lower()
+        lookup.setdefault(stem, key)
+    return lookup
+
+
+SFX_LOOKUP = _build_sfx_lookup()
+TRANSITION_TYPES = ["cut", "crossfade", "slide", "zoom", "scale", "rotate", "blur"]
 TRANSITION_DIRECTIONS = ["left", "right", "up", "down"]
 HIGHLIGHT_POSITIONS = ["top", "center", "bottom"]
-HIGHLIGHT_ANIMATIONS = ["fade", "zoom", "slide"]
+HIGHLIGHT_ANIMATIONS = ["fade", "zoom", "slide", "bounce", "float", "flip"]
 MAX_HIGHLIGHTS = 6
 DEFAULT_HIGHLIGHT_DURATION = 2.6
 
@@ -106,7 +150,7 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
                 "duration": 2.6,
                 "position": "center",
                 "animation": "zoom",
-                "sfx": "pop.mp3",
+                "sfx": "ui/pop.mp3",
                 "volume": 0.75,
             }
         ],
@@ -132,11 +176,19 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         f"{json.dumps(schema_hint, indent=2)}\n\n"
         "Rules:\n"
         "- `segments` chứa các đoạn theo timeline với `sourceStart` (giây trong video gốc) và `duration`. Có thể thêm `label` mô tả ngắn.\n"
-        "- `transitionIn`/`transitionOut` dùng `type` thuộc: " + transition_types + "; nếu `type` là `slide` có thể thêm `direction`: " + transition_directions + ".\n"
+        "- `transitionIn`/`transitionOut` dùng `type` thuộc: "
+        + transition_types
+        + "; nếu `type` là `slide` có thể thêm `direction`: "
+        + transition_directions
+        + "; với `zoom`/`scale`/`rotate`/`blur` có thể set `intensity` trong khoảng 0.1-0.35 để kiểm soát độ mạnh.\n"
         "- Trim/merge câu khi khoảng lặng > ~0.7s trừ khi cần giữ nhịp cảm xúc.\n"
         f"- Chỉ tạo tối đa {MAX_HIGHLIGHTS} highlight mạnh nhất. Duy trì mỗi highlight 2-4s.\n"
         "- `highlights` gồm `text`, `start`, `duration`, `position` (" + highlight_positions + "), `animation` (" + highlight_animations + "), và `sfx` nếu cần.\n"
-        "- SFX phải chọn từ thư viện public/sfx với tên file: " + sfx_names + ". Gợi ý: " + sfx_notes + "\n"
+        "- SFX phải chọn từ thư viện public/sfx với path tương đối (vd: ui/pop.mp3). Danh sách: "
+        + sfx_names
+        + ". Gợi ý: "
+        + sfx_notes
+        + "\n"
         "- Nếu highlight có SFX, đặt `start` khớp moment cần nhấn và cân nhắc `volume` (0-1).\n"
         "- Đảm bảo các segment nối tiếp nhau không bị gap thời gian.\n"
         "- Chỉ trả về JSON trong một code block.\n\n"
@@ -177,14 +229,24 @@ def normalize_sfx_name(value: Any) -> str | None:
     candidate = str(value).strip()
     if not candidate:
         return None
-    filename = Path(candidate).name
-    if not filename:
-        return None
-    lower = filename.lower()
-    for name in AVAILABLE_SFX.keys():
-        if name.lower() == lower:
-            return name
-    return filename
+    candidate_normalized = candidate.replace("\\", "/").lstrip("./")
+    if candidate_normalized.startswith("sfx/"):
+        candidate_normalized = candidate_normalized[4:]
+
+    checks = [
+        candidate_normalized.lower(),
+        Path(candidate_normalized).name.lower(),
+        Path(candidate_normalized).stem.lower(),
+    ]
+
+    for key in checks:
+        if not key:
+            continue
+        match = SFX_LOOKUP.get(key)
+        if match:
+            return match
+
+    return None
 
 
 def normalize_transition(value: Any) -> Dict[str, Any] | None:
@@ -194,6 +256,7 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
     transition_type = None
     direction = None
     duration_value = None
+    intensity_value = None
 
     if isinstance(value, str):
         transition_type = value.lower()
@@ -201,6 +264,7 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
         transition_type = (value.get("type") or value.get("style") or "").lower()
         direction = (value.get("direction") or value.get("dir") or "").lower() or None
         duration_value = ensure_float(value.get("duration", value.get("length", 0.0)), 0.0)
+        intensity_value = ensure_float(value.get("intensity", value.get("strength", 0.0)), 0.0)
     else:
         return None
 
@@ -213,6 +277,15 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
                 break
         transition_type = "slide"
 
+    elif transition_type in {"zoom-in", "zoom-out", "push", "push-in", "push-out", "punch", "punch-in", "punch-out"}:
+        transition_type = "zoom"
+    elif transition_type in {"scale-up", "scale-down", "grow", "shrink"}:
+        transition_type = "scale"
+    elif transition_type in {"spin", "twist", "turn"}:
+        transition_type = "rotate"
+    elif transition_type in {"focus", "defocus", "dream", "soft-focus", "soften"}:
+        transition_type = "blur"
+
     if transition_type not in TRANSITION_TYPES:
         transition_type = "cut"
 
@@ -222,6 +295,11 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
     duration_value = duration_value if duration_value and duration_value > 0 else 0.6
     duration_value = max(0.1, min(duration_value, 3.0))
 
+    if intensity_value is not None and intensity_value <= 0:
+        intensity_value = None
+    if intensity_value is not None:
+        intensity_value = round(max(0.05, min(float(intensity_value), 0.6)), 3)
+
     transition: Dict[str, Any] = {
         "type": transition_type,
         "duration": round(duration_value, 3),
@@ -229,6 +307,9 @@ def normalize_transition(value: Any) -> Dict[str, Any] | None:
 
     if transition_type == "slide" and direction in TRANSITION_DIRECTIONS:
         transition["direction"] = direction
+
+    if transition_type in {"zoom", "scale", "rotate", "blur"} and intensity_value:
+        transition["intensity"] = intensity_value
 
     return transition
 

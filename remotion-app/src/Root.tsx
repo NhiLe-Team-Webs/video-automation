@@ -1,6 +1,5 @@
 import {Composition} from 'remotion';
 import {FinalComposition} from './components/FinalComposition';
-import {planExample} from './data/planSchema';
 import {
   DEFAULT_DURATION_IN_FRAMES,
   VIDEO_FPS,
@@ -18,7 +17,7 @@ export const RemotionRoot: React.FC = () => {
       width={VIDEO_WIDTH}
       height={VIDEO_HEIGHT}
       defaultProps={{
-        plan: planExample,
+        plan: null,
         planPath: 'plan.json',
         inputVideo: 'input.mp4',
         fallbackTransitionDuration: 0.75,

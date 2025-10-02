@@ -53,7 +53,7 @@
     "sfx": [
       {
         "name": "applause hit",
-        "asset": "sfx/applause.mp3",
+        "asset": "sfx/emotion/applause.mp3",
         "keywords": {
           "any": [
             "applause",
@@ -65,7 +65,7 @@
       },
       {
         "name": "camera snap",
-        "asset": "sfx/camera-click.mp3",
+        "asset": "sfx/tech/camera-click.mp3",
         "keywords": {
           "any": [
             "camera",
@@ -78,7 +78,7 @@
       },
       {
         "name": "question ping",
-        "asset": "sfx/ding.mp3",
+        "asset": "sfx/emphasis/ding.mp3",
         "match_type": "regex",
         "scope": "segment",
         "keywords": {
@@ -91,7 +91,7 @@
       },
       {
         "name": "whoosh transition",
-        "asset": "sfx/woosh.mp3",
+        "asset": "sfx/whoosh/whoosh.mp3",
         "keywords": [
           "transition",
           "whoosh",
