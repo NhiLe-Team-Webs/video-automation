@@ -1,29 +1,31 @@
 # Video Automation Pipeline
 
-Hệ thống này dựng video tự động dựa trên Remotion, MoviePy, Auto-Editor, Whisper và một file kế hoạch (`plan.json`) sinh ra từ AI/Python. Repo gồm:
+This project stitches together Remotion, MoviePy, Auto-Editor, Whisper, and a generated planning file (`plan.json`) to automate end-to-end video production. The repository contains two coordinated workspaces:
 
-- `python-be/`: pipeline Python tự động trim video, tạo transcript và sinh `plan.json` khớp với Remotion.
-- `remotion-app/`: project Remotion dựng video cuối.
+- `python-be/`: Python pipeline that trims the source video, generates transcripts, and produces a `plan.json` tailored for Remotion.
+- `remotion-app/`: Remotion project that renders the final video based on the processed assets.
 
-## Kiến trúc tổng quan
+## High-level architecture
 
-1. Python/AI phân tích `input.mp4`, sinh `plan.json` chứa danh sách segment, highlight và thông tin hiệu ứng.
-2. Remotion đọc `input.mp4`, `plan.json`, thư mục `sfx/` để dựng timeline:
-   - Cắt video thành các đoạn (`segments`).
-   - Áp dụng transition (crossfade/slide).
-   - Render text highlight với animation (fade/zoom/slide).
-   - Ghép SFX tương ứng highlight.
-3. Xuất video cuối `final.mp4` bằng `npx remotion render`.
+1. The Python/AI pipeline analyzes `input.mp4` and generates `plan.json`, which includes segment boundaries, highlight metadata, and animation details.
+2. Remotion reads `input.mp4`, `plan.json`, and the `sfx/` directory to assemble the timeline:
+   - Split the video into segments.
+   - Apply transitions (crossfade/slide, etc.).
+   - Render animated text highlights (fade/zoom/slide) in sync with the script.
+   - Layer sound effects that correspond to each highlight.
+3. Render the final cut (`final.mp4`) with `npx remotion render`.
 
-## Chuẩn bị dữ liệu đầu vào
+## Prepare the input data
 
-1. Dùng pipeline Python (khuyến nghị):
+1. **Recommended: run the Python pipeline**
    ```bash
    cd python-be
-   ./run_all.sh                     # hoặc run_all.sh trên Windows
+   ./run_all.sh                     # or run_all.sh on Windows
    ```
-   Script sẽ tạo `outputs/plan.json` và copy sang `remotion-app/public/plan.json`, đồng thời copy video đã trim thành `remotion-app/public/input.mp4`.
-2. Nếu muốn tự cung cấp dữ liệu, đặt thẳng video và plan vào `remotion-app/public/`. Thư mục `public/` chứa sẵn `plan.sample.json` để tham khảo cấu trúc:
+   The script generates `outputs/plan.json`, copies it to `remotion-app/public/plan.json`, and copies the trimmed video to `remotion-app/public/input.mp4`.
+
+2. **Manual data prep**
+   If you prefer to supply assets manually, place your video and plan file inside `remotion-app/public/`. The folder includes `plan.sample.json` as a reference:
 
 ```json
 {
@@ -38,7 +40,7 @@ Hệ thống này dựng video tự động dựa trên Remotion, MoviePy, Auto-
   "highlights": [
     {
       "id": "hook",
-      "text": "Điểm nhấn chính xuất hiện!",
+      "text": "Key message appears!",
       "start": 5,
       "duration": 4,
       "position": "center",
@@ -49,48 +51,52 @@ Hệ thống này dựng video tự động dựa trên Remotion, MoviePy, Auto-
 }
 ```
 
-3. Đặt các hiệu ứng âm thanh trong `remotion-app/public/sfx/` (ví dụ `ui/pop.mp3`). Pipeline Python sẽ giữ nguyên path SFX tương đối khi sinh highlight.
+3. Place your sound-effect files in `remotion-app/public/sfx/` (for example, `ui/pop.mp3`). The Python pipeline preserves relative SFX paths when it generates highlights.
 
-> **Lưu ý:** Remotion tự động đọc `plan.json` trong thư mục `public/`. Nếu muốn render bằng đường dẫn khác, truyền thêm props khi gọi Remotion CLI:
+> **Note:** Remotion automatically looks for `plan.json` in the `public/` folder. If you want to render from a different location, pass custom props when running the Remotion CLI:
 >
 > ```bash
 > npx remotion render src/Root.tsx FinalVideo out/final.mp4 --props '{"planPath":"custom-plan.json","inputVideo":"input.mp4"}'
 > ```
 
-Nếu video cuối dài hơn 15 phút, cập nhật `DEFAULT_DURATION_IN_FRAMES` trong `remotion-app/src/config.ts` để phù hợp với thời lượng mới.
+If the final video is longer than 15 minutes, update `DEFAULT_DURATION_IN_FRAMES` in `remotion-app/src/config.ts` to match the new duration.
 
-## Chạy preview & render
+## Preview and render
 
 ```bash
 cd remotion-app
 npm install
-npm start          # Mở Remotion Studio preview
-# hoặc
-npm run render     # Xuất video ra out/final.mp4
+npm start          # Launch Remotion Studio preview
+# or
+npm run render     # Produce out/final.mp4
 ```
 
-Output cuối được lưu trong `remotion-app/out/final.mp4`.
+The exported video is saved to `remotion-app/out/final.mp4`.
 
-## Cấu trúc Remotion
+## Remotion structure
 
-- `src/types.ts`: Định nghĩa type cho segments, highlights, transitions.
-- `src/data/planSchema.ts`: Schema Zod + ví dụ plan.
-- `src/hooks/usePlan.ts`: Hook tải & validate `plan.json`.
-- `src/components/VideoTimeline.tsx`: Cắt video theo segments, xử lý transition.
-- `src/components/HighlightCallout.tsx` + `HighlightsLayer.tsx`: Text overlay với animation.
-- `src/components/SfxLayer.tsx`: Chèn SFX theo highlight.
-- `src/components/FinalComposition.tsx`: Ghép toàn bộ timeline.
-- `src/Root.tsx`: Đăng ký composition Remotion.
+- `src/types.ts`: Shared types for segments, highlights, and transitions.
+- `src/data/planSchema.ts`: Zod schema definition and example plan data.
+- `src/hooks/usePlan.ts`: Hook that loads and validates `plan.json`.
+- `src/components/VideoTimeline.tsx`: Splits video into segments and handles transitions.
+- `src/components/HighlightCallout.tsx` + `HighlightsLayer.tsx`: Animated text overlays.
+- `src/components/SfxLayer.tsx`: Synchronizes SFX with highlight timing.
+- `src/components/FinalComposition.tsx`: Combines all timeline layers.
+- `src/Root.tsx`: Registers the Remotion composition.
 
-## Mở rộng
+## Extend the pipeline
 
-- Có thể kết hợp pipeline Python để tự sinh `plan.json` từ MoviePy/Auto-Editor.
-- Tích hợp Whisper để tạo transcript và highlight tự động.
-- Thêm background music track bằng cách mở rộng `FinalComposition`.
-- Sử dụng metadata (ví dụ tag `cameraMovement`) trong `plan.json` để tạo animation nâng cao.
+- Connect the Python pipeline to Auto-Editor/MoviePy for automated plan generation.
+- Integrate Whisper to generate transcripts and highlight suggestions automatically.
+- Add background music by extending `FinalComposition` with an audio layer.
+- Use metadata (for example, a `cameraMovement` tag) inside `plan.json` to drive advanced animations.
 
-## Tiêu chí chất lượng
+## Quality checklist
 
-- Video không bị khung đen giữa các đoạn.
-- Transition mượt, highlight xuất hiện đúng thời điểm & kèm SFX.
-- Animation tinh gọn, giữ phong cách YouTube cơ bản.
+- No black frames appear between segments.
+- Transitions are smooth, and highlights appear on time with matching SFX.
+- Animations stay concise to match the YouTube-inspired style.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
