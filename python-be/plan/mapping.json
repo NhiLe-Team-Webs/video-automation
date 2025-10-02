@@ -1,0 +1,150 @@
+{
+  "filler_detection": {
+    "phrases": [
+      "um",
+      "uh",
+      "like",
+      "you know",
+      "sort of",
+      "kind of"
+    ],
+    "ratio_threshold": 0.55,
+    "min_duration": 1.0
+  },
+  "segmenting": {
+    "merge_gap_seconds": 0.75,
+    "min_duration": 1.0
+  },
+  "defaults": {
+    "zoom_scale": 1.12,
+    "sfx_cooldown": 8.0,
+    "zoom_cooldown": 6.0
+  },
+  "audio": {
+    "filters": {
+      "highpass_hz": 120,
+      "lowpass_hz": 8000
+    }
+  },
+  "transitions": {
+    "default": {
+      "asset": "transition/fade.mov",
+      "gap_threshold": 1.5,
+      "duration": 0.5,
+      "offset": 0.0
+    },
+    "rules": [
+      {
+        "name": "question emphasis",
+        "asset": "transition/fade.mov",
+        "min_gap_seconds": 0.6,
+        "max_gap_seconds": 4.0,
+        "scope": "next",
+        "match_type": "regex",
+        "keywords": {
+          "any": ["\\?$"]
+        },
+        "duration": 0.6,
+        "offset": -0.1
+      }
+    ]
+  },
+  "actions": {
+    "sfx": [
+      {
+        "name": "applause hit",
+        "asset": "sfx/applause.mp3",
+        "keywords": {
+          "any": [
+            "applause",
+            "cheer"
+          ]
+        },
+        "cooldown": 18.0,
+        "offset": 0.15
+      },
+      {
+        "name": "camera snap",
+        "asset": "sfx/camera-click.mp3",
+        "keywords": {
+          "any": [
+            "camera",
+            "snapshot",
+            "photo"
+          ]
+        },
+        "cooldown": 12.0,
+        "offset": 0.0
+      },
+      {
+        "name": "question ping",
+        "asset": "sfx/ding.mp3",
+        "match_type": "regex",
+        "scope": "segment",
+        "keywords": {
+          "any": ["\\b(what|why|how|when)\\b"],
+          "none": ["solution"]
+        },
+        "cooldown_group": "question_stinger",
+        "cooldown": 10.0,
+        "offset": 0.05
+      },
+      {
+        "name": "whoosh transition",
+        "asset": "sfx/woosh.mp3",
+        "keywords": [
+          "transition",
+          "whoosh",
+          "switch"
+        ],
+        "scope": "either",
+        "cooldown": 10.0,
+        "offset": 0.0
+      }
+    ],
+    "zoom": [
+      {
+        "name": "key insight",
+        "keywords": {
+          "any": [
+            "important",
+            "key point",
+            "main idea"
+          ]
+        },
+        "min_duration": 2.0,
+        "scale": 1.2,
+        "cooldown": 10.0
+      },
+      {
+        "name": "call to action",
+        "scope": "segment",
+        "keywords": {
+          "any": [
+            "subscribe",
+            "check out",
+            "download"
+          ]
+        },
+        "min_duration": 1.2,
+        "scale": 1.15,
+        "cooldown": 12.0
+      },
+      {
+        "name": "demo highlight",
+        "match_type": "token",
+        "keywords": {
+          "any": [
+            "look",
+            "focus",
+            "see"
+          ],
+          "none": ["quick"]
+        },
+        "min_duration": 1.0,
+        "scale": 1.1,
+        "cooldown": 6.0
+      }
+    ]
+  }
+}

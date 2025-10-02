@@ -1,0 +1,6 @@
+auto-editor
+openai-whisper
+moviepy
+pydub
+google-generativeai
+python-dotenv
