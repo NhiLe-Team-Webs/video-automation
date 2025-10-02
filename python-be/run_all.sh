@@ -20,7 +20,11 @@ fi
 mkdir -p "$OUTPUT_DIR" "$REMOTION_PUBLIC"
 
 echo "[STEP] Auto-Editor: loại bỏ khoảng lặng => $AUTO_EDITOR_OUTPUT"
-python -m auto_editor "$SOURCE_VIDEO" -o "$AUTO_EDITOR_OUTPUT" --edit audio:threshold=0.04 --quiet
+python -m auto_editor "$SOURCE_VIDEO" -o "$AUTO_EDITOR_OUTPUT" \
+  --edit audio:threshold=0.04 \
+  --video-codec libx264 \
+  --audio-codec aac \
+  --quiet
 
 echo "[STEP] Whisper: tạo transcript SRT => $WHISPER_SRT"
 python -m whisper "$AUTO_EDITOR_OUTPUT" \

@@ -23,10 +23,19 @@ if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 if not exist "%REMOTION_PUBLIC%" mkdir "%REMOTION_PUBLIC%"
 
 echo [STEP] Auto-Editor: loai bo khoang lang => %AUTO_EDITOR_OUTPUT%
-python -m auto_editor "%SOURCE_VIDEO%" -o "%AUTO_EDITOR_OUTPUT%" --edit audio:threshold=0.04 --quiet
+python -m auto_editor "%SOURCE_VIDEO%" -o "%AUTO_EDITOR_OUTPUT%" ^
+  --edit audio:threshold=0.04 ^
+  --video-codec libx264 ^
+  --audio-codec aac ^
+  --quiet
 
 echo [STEP] Whisper: tao transcript SRT => %WHISPER_SRT%
-python -m whisper "%AUTO_EDITOR_OUTPUT%" --model small --language en --task transcribe --output_format srt --output_dir "%OUTPUT_DIR%"
+python -m whisper "%AUTO_EDITOR_OUTPUT%" ^
+  --model small ^
+  --language en ^
+  --task transcribe ^
+  --output_format srt ^
+  --output_dir "%OUTPUT_DIR%"
 
 if not exist "%WHISPER_SRT%" (
   echo [ERROR] Whisper khong tao duoc file %WHISPER_SRT%
