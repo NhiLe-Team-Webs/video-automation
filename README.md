@@ -2,7 +2,7 @@
 
 Hệ thống này dựng video tự động dựa trên Remotion, MoviePy, Auto-Editor, Whisper và một file kế hoạch (`plan.json`) sinh ra từ AI/Python. Repo gồm:
 
-- `python-be/`: các script backend (chưa chỉnh sửa trong nhiệm vụ này).
+- `python-be/`: pipeline Python tự động trim video, tạo transcript và sinh `plan.json` khớp với Remotion.
 - `remotion-app/`: project Remotion dựng video cuối.
 
 ## Kiến trúc tổng quan
@@ -17,8 +17,13 @@ Hệ thống này dựng video tự động dựa trên Remotion, MoviePy, Auto-
 
 ## Chuẩn bị dữ liệu đầu vào
 
-1. Đặt video gốc vào `remotion-app/public/input.mp4`.
-2. Đặt file kế hoạch thật vào `remotion-app/public/plan.json`. Thư mục `public/` chứa sẵn `plan.sample.json` để tham khảo cấu trúc:
+1. Dùng pipeline Python (khuyến nghị):
+   ```bash
+   cd python-be
+   ./run_all.sh                     # hoặc run_all.sh trên Windows
+   ```
+   Script sẽ tạo `outputs/plan.json` và copy sang `remotion-app/public/plan.json`, đồng thời copy video đã trim thành `remotion-app/public/input.mp4`.
+2. Nếu muốn tự cung cấp dữ liệu, đặt thẳng video và plan vào `remotion-app/public/`. Thư mục `public/` chứa sẵn `plan.sample.json` để tham khảo cấu trúc:
 
 ```json
 {
@@ -44,7 +49,7 @@ Hệ thống này dựng video tự động dựa trên Remotion, MoviePy, Auto-
 }
 ```
 
-3. Đặt các hiệu ứng âm thanh trong `remotion-app/public/sfx/` (ví dụ `pop.mp3`).
+3. Đặt các hiệu ứng âm thanh trong `remotion-app/public/sfx/` (ví dụ `pop.mp3`). Pipeline Python sẽ giữ nguyên tên file SFX khi sinh highlight.
 
 > **Lưu ý:** Mặc định composition dùng `planExample` trong code để preview. Khi render dữ liệu thực tế hãy truyền props để dùng `plan.json`:
 >
