@@ -43,21 +43,19 @@ Hệ thống này dựng video tự động dựa trên Remotion, MoviePy, Auto-
       "duration": 4,
       "position": "center",
       "animation": "zoom",
-      "sfx": "pop.mp3"
+      "sfx": "ui/pop.mp3"
     }
   ]
 }
 ```
 
-3. Đặt các hiệu ứng âm thanh trong `remotion-app/public/sfx/` (ví dụ `pop.mp3`). Pipeline Python sẽ giữ nguyên tên file SFX khi sinh highlight.
+3. Đặt các hiệu ứng âm thanh trong `remotion-app/public/sfx/` (ví dụ `ui/pop.mp3`). Pipeline Python sẽ giữ nguyên path SFX tương đối khi sinh highlight.
 
-> **Lưu ý:** Mặc định composition dùng `planExample` trong code để preview. Khi render dữ liệu thực tế hãy truyền props để dùng `plan.json`:
+> **Lưu ý:** Remotion tự động đọc `plan.json` trong thư mục `public/`. Nếu muốn render bằng đường dẫn khác, truyền thêm props khi gọi Remotion CLI:
 >
 > ```bash
-> npx remotion render src/Root.tsx FinalVideo out/final.mp4 --props '{"plan":null,"planPath":"plan.json","inputVideo":"input.mp4"}'
+> npx remotion render src/Root.tsx FinalVideo out/final.mp4 --props '{"planPath":"custom-plan.json","inputVideo":"input.mp4"}'
 > ```
->
-> Khi props `plan` là `null`, component sẽ tự đọc file `plan.json` trong `public/`.
 
 Nếu video cuối dài hơn 15 phút, cập nhật `DEFAULT_DURATION_IN_FRAMES` trong `remotion-app/src/config.ts` để phù hợp với thời lượng mới.
 

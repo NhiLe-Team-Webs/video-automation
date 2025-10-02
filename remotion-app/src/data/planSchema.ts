@@ -14,6 +14,10 @@ const transitionTypeSchema: z.ZodType<TransitionType> = z.enum([
   'cut',
   'crossfade',
   'slide',
+  'zoom',
+  'scale',
+  'rotate',
+  'blur',
 ]);
 
 const transitionDirectionSchema: z.ZodType<TransitionDirection> = z.enum([
@@ -27,6 +31,7 @@ const transitionPlanSchema: z.ZodType<TransitionPlan> = z.object({
   type: transitionTypeSchema,
   duration: z.number().positive().optional(),
   direction: transitionDirectionSchema.optional(),
+  intensity: z.number().positive().optional(),
 });
 
 const segmentPlanSchema: z.ZodType<SegmentPlan> = z.object({
@@ -43,6 +48,9 @@ const highlightAnimationSchema: z.ZodType<HighlightAnimation> = z.enum([
   'fade',
   'zoom',
   'slide',
+  'bounce',
+  'float',
+  'flip',
 ]);
 
 const highlightPositionSchema: z.ZodType<HighlightPosition> = z.enum([
@@ -101,7 +109,7 @@ export const planExample: Plan = {
       duration: 4,
       position: 'center',
       animation: 'zoom',
-      sfx: 'pop.mp3',
+      sfx: 'ui/pop.mp3',
     },
     {
       id: 'stat',
@@ -110,7 +118,7 @@ export const planExample: Plan = {
       duration: 5,
       position: 'bottom',
       animation: 'slide',
-      sfx: 'whoosh.wav',
+      sfx: 'whoosh/whoosh.mp3',
     },
   ],
 };
