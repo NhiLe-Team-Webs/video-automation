@@ -26,8 +26,9 @@ const ensureRemoved = () => {
 };
 
 const createSymlink = () => {
+  const linkType = process.platform === 'win32' ? 'junction' : 'dir';
   try {
-    symlinkSync(assetsDir, target, 'dir');
+    symlinkSync(assetsDir, target, linkType);
     console.log(`[assets] Symlinked ${target} -> ${assetsDir}`);
     return true;
   } catch (error) {
