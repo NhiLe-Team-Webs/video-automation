@@ -16,6 +16,8 @@ export interface TransitionPlan {
   intensity?: number;
 }
 
+export type CameraMovement = 'static' | 'zoomIn' | 'zoomOut';
+
 export interface SegmentPlan {
   id: string;
   sourceStart: number;
@@ -24,11 +26,22 @@ export interface SegmentPlan {
   transitionOut?: TransitionPlan;
   label?: string;
   playbackRate?: number;
+  cameraMovement?: CameraMovement;
+  metadata?: Record<string, unknown>;
 }
 
 export type HighlightPosition = 'top' | 'center' | 'bottom';
 
-export type HighlightAnimation = 'fade' | 'zoom' | 'slide' | 'bounce' | 'float' | 'flip';
+export type HighlightAnimation =
+  | 'fade'
+  | 'zoom'
+  | 'slide'
+  | 'bounce'
+  | 'float'
+  | 'flip'
+  | 'typewriter';
+
+export type HighlightVariant = 'callout' | 'blurred' | 'cutaway' | 'brand' | 'typewriter';
 
 export interface HighlightPlan {
   id: string;
@@ -39,6 +52,7 @@ export interface HighlightPlan {
   animation?: HighlightAnimation;
   sfx?: string;
   volume?: number;
+  variant?: HighlightVariant;
 }
 
 export interface Plan {

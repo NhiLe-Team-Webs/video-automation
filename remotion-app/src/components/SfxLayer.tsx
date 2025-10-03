@@ -6,14 +6,15 @@ const SFX_LOOKUP = (() => {
   const entries = new Map<string, string>();
 
   for (const relativePath of SFX_CATALOG) {
-    const canonical = `sfx/${relativePath}`;
+    const canonical = relativePath.startsWith('assets/') ? relativePath : `assets/sfx/${relativePath}`;
+    const withoutPrefix = canonical.replace(/^assets\//, '');
     const lowerCanonical = canonical.toLowerCase();
-    const lowerRelative = relativePath.toLowerCase();
+    const lowerRelative = withoutPrefix.toLowerCase();
 
     entries.set(lowerCanonical, canonical);
     entries.set(lowerRelative, canonical);
 
-    const fileName = relativePath.split('/').pop();
+    const fileName = withoutPrefix.split('/').pop();
     if (fileName) {
       const lowerFileName = fileName.toLowerCase();
       entries.set(lowerFileName, canonical);
@@ -43,9 +44,17 @@ const normalizeSfx = (value: string | undefined | null): string | null => {
   }
 
   const lower = sanitized.toLowerCase();
-  const withoutPrefix = lower.startsWith('sfx/') ? lower.slice(4) : lower;
+  const withoutAssets = lower.startsWith('assets/') ? lower.slice(7) : lower;
+  const withoutSfx = withoutAssets.startsWith('sfx/') ? withoutAssets.slice(4) : withoutAssets;
 
-  const candidates = [lower, withoutPrefix];
+  const candidates = [
+    lower,
+    withoutAssets,
+    withoutSfx,
+    `assets/${withoutAssets}`,
+    `assets/sfx/${withoutSfx}`,
+    `sfx/${withoutSfx}`,
+  ];
 
   const fileName = sanitized.split('/').pop();
   if (fileName) {
@@ -60,15 +69,19 @@ const normalizeSfx = (value: string | undefined | null): string | null => {
     }
   }
 
-  if (sanitized.startsWith('sfx/')) {
+  if (sanitized.startsWith('assets/')) {
     return sanitized;
   }
 
-  if (sanitized.includes('/')) {
-    return `sfx/${sanitized}`;
+  if (sanitized.startsWith('sfx/')) {
+    return `assets/${sanitized}`;
   }
 
-  return `sfx/${sanitized}`;
+  if (sanitized.includes('/')) {
+    return `assets/sfx/${sanitized}`;
+  }
+
+  return `assets/sfx/${sanitized}`;
 };
 
 interface SfxLayerProps {

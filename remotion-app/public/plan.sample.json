@@ -3,41 +3,66 @@
     {
       "id": "intro",
       "sourceStart": 0,
-      "duration": 20,
-      "transitionOut": {"type": "crossfade", "duration": 1}
+      "duration": 18,
+      "transitionOut": {"type": "crossfade", "duration": 1},
+      "cameraMovement": "zoomIn"
     },
     {
-      "id": "main-1",
-      "sourceStart": 30,
-      "duration": 45,
+      "id": "demo",
+      "sourceStart": 28,
+      "duration": 32,
       "transitionIn": {"type": "crossfade", "duration": 1},
-      "transitionOut": {"type": "slide", "duration": 0.75, "direction": "left"}
+      "transitionOut": {"type": "slide", "duration": 0.75, "direction": "left"},
+      "cameraMovement": "zoomOut"
     },
     {
-      "id": "main-2",
-      "sourceStart": 90,
-      "duration": 35,
-      "transitionIn": {"type": "slide", "duration": 0.75, "direction": "right"}
+      "id": "cta",
+      "sourceStart": 72,
+      "duration": 20,
+      "transitionIn": {"type": "slide", "duration": 0.65, "direction": "up"},
+      "cameraMovement": "zoomIn"
     }
   ],
   "highlights": [
     {
       "id": "hook",
-      "text": "Điểm nhấn chính xuất hiện!",
-      "start": 5,
+      "text": "Tăng gấp đôi hiệu suất với workflow tự động hoá.",
+      "start": 4.5,
       "duration": 4,
       "position": "center",
-      "animation": "zoom",
-      "sfx": "ui/pop.mp3"
+      "animation": "fade",
+      "variant": "blurred",
+      "sfx": "assets/sfx/ui/pop.mp3"
     },
     {
-      "id": "stat",
-      "text": "Số liệu quan trọng được giới thiệu.",
-      "start": 52,
-      "duration": 5,
+      "id": "metric",
+      "text": "48 giờ sản xuất video chỉ còn 6 giờ.",
+      "start": 22,
+      "duration": 4.5,
       "position": "bottom",
       "animation": "slide",
-      "sfx": "whoosh/whoosh.mp3"
+      "variant": "brand",
+      "sfx": "assets/sfx/whoosh/whoosh.mp3"
+    },
+    {
+      "id": "quote",
+      "text": "\"Khách hàng yêu thích trải nghiệm cá nhân hoá từng phút.\"",
+      "start": 39,
+      "duration": 5,
+      "position": "top",
+      "animation": "zoom",
+      "variant": "cutaway",
+      "sfx": "assets/sfx/emotion/applause.mp3"
+    },
+    {
+      "id": "cta",
+      "text": "Đăng ký demo ngay hôm nay",
+      "start": 68,
+      "duration": 5,
+      "position": "center",
+      "animation": "typewriter",
+      "variant": "typewriter",
+      "sfx": "assets/sfx/tech/notification.mp3"
     }
   ]
 }
