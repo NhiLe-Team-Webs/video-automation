@@ -13,3 +13,4 @@ out
 plan.json
 __pycache__/
 *.pyc
+remotion-app/public/assets

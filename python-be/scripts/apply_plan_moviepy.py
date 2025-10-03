@@ -6,6 +6,8 @@ from pathlib import Path
 import time
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = REPO_ROOT.parent
+ASSETS_ROOT = PROJECT_ROOT / 'assets'
 
 from moviepy import (
     AudioFileClip,
@@ -90,12 +92,17 @@ def resolve_asset_path(asset: str | None, subdir: str) -> str | None:
         return None
     if os.path.exists(asset):
         return asset
-    if asset.startswith("assets/"):
-        return asset
-    candidate = os.path.join("assets", subdir, asset)
-    if os.path.exists(candidate):
-        return candidate
-    return candidate
+    normalized = asset.replace("\\", "/").strip("/")
+    if normalized.startswith("assets/"):
+        candidate = PROJECT_ROOT / normalized
+        return str(candidate) if candidate.exists() else normalized
+    candidate = ASSETS_ROOT / subdir / normalized
+    if candidate.exists():
+        return str(candidate)
+    fallback = PROJECT_ROOT / normalized
+    if fallback.exists():
+        return str(fallback)
+    return str(candidate)
 
 
 def safe_close_clip(clip):
@@ -143,7 +150,7 @@ def make_caption_clip(text: str, start_time: float, duration: float, style_name:
             candidates.append(entry_path)
         else:
             candidates.append(REPO_ROOT / font_entry)
-            candidates.append(REPO_ROOT / 'assets/fonts' / font_entry)
+            candidates.append(PROJECT_ROOT / 'assets/fonts' / font_entry)
         for candidate in candidates:
             if candidate.is_file():
                 font_path = str(candidate)
