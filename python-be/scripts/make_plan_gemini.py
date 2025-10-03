@@ -29,7 +29,7 @@ def _humanize_sfx_description(relative_path: Path) -> str:
 
 def discover_available_sfx() -> Dict[str, str]:
     root_dir = Path(__file__).resolve().parents[2]
-    sfx_dir = root_dir / "remotion-app" / "public" / "sfx"
+    sfx_dir = root_dir / "assets" / "sfx"
     available: Dict[str, str] = {}
 
     if not sfx_dir.exists():
@@ -40,7 +40,10 @@ def discover_available_sfx() -> Dict[str, str]:
             continue
         relative_path = asset.relative_to(sfx_dir)
         key = relative_path.as_posix()
-        available[key] = _humanize_sfx_description(relative_path)
+        description = _humanize_sfx_description(relative_path)
+        available[key] = description
+        prefixed_key = f"assets/sfx/{key}"
+        available[prefixed_key] = description
 
     return available
 
@@ -70,7 +73,8 @@ SFX_LOOKUP = _build_sfx_lookup()
 TRANSITION_TYPES = ["cut", "crossfade", "slide", "zoom", "scale", "rotate", "blur"]
 TRANSITION_DIRECTIONS = ["left", "right", "up", "down"]
 HIGHLIGHT_POSITIONS = ["top", "center", "bottom"]
-HIGHLIGHT_ANIMATIONS = ["fade", "zoom", "slide", "bounce", "float", "flip"]
+HIGHLIGHT_ANIMATIONS = ["fade", "zoom", "slide", "bounce", "float", "flip", "typewriter"]
+HIGHLIGHT_VARIANTS = ["callout", "blurred", "brand", "cutaway", "typewriter"]
 MAX_HIGHLIGHTS = 6
 DEFAULT_HIGHLIGHT_DURATION = 2.6
 
@@ -183,8 +187,8 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         + "; với `zoom`/`scale`/`rotate`/`blur` có thể set `intensity` trong khoảng 0.1-0.35 để kiểm soát độ mạnh.\n"
         "- Trim/merge câu khi khoảng lặng > ~0.7s trừ khi cần giữ nhịp cảm xúc.\n"
         f"- Chỉ tạo tối đa {MAX_HIGHLIGHTS} highlight mạnh nhất. Duy trì mỗi highlight 2-4s.\n"
-        "- `highlights` gồm `text`, `start`, `duration`, `position` (" + highlight_positions + "), `animation` (" + highlight_animations + "), và `sfx` nếu cần.\n"
-        "- SFX phải chọn từ thư viện public/sfx với path tương đối (vd: ui/pop.mp3). Danh sách: "
+        "- `highlights` gồm `text`, `start`, `duration`, `position` (" + highlight_positions + "), `animation` (" + highlight_animations + "), `variant` (blurred/brand/cutaway/typewriter) và `sfx` nếu cần.\n"
+        "- SFX phải chọn từ thư viện assets/sfx với path tương đối (vd: assets/sfx/ui/pop.mp3 hoặc ui/pop.mp3). Danh sách: "
         + sfx_names
         + ". Gợi ý: "
         + sfx_notes
@@ -230,6 +234,8 @@ def normalize_sfx_name(value: Any) -> str | None:
     if not candidate:
         return None
     candidate_normalized = candidate.replace("\\", "/").lstrip("./")
+    if candidate_normalized.startswith("assets/"):
+        candidate_normalized = candidate_normalized[7:]
     if candidate_normalized.startswith("sfx/"):
         candidate_normalized = candidate_normalized[4:]
 
@@ -246,6 +252,17 @@ def normalize_sfx_name(value: Any) -> str | None:
         if match:
             return match
 
+    return None
+
+
+def normalize_camera_movement(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().lower().replace(" ", "").replace("-", "").replace("_", "")
+    if normalized in {"zoomin", "pushin", "push"}:
+        return "zoomIn"
+    if normalized in {"zoomout", "pullback", "pull"}:
+        return "zoomOut"
     return None
 
 
@@ -351,9 +368,34 @@ def normalize_highlight_item(raw: Dict[str, Any], index: int) -> Dict[str, Any] 
         "animation": animation,
     }
 
+    variant_raw = raw.get("variant") or raw.get("layout") or raw.get("styleVariant")
+    if variant_raw:
+        variant_key = str(variant_raw).strip().lower().replace(" ", "").replace("-", "").replace("_", "")
+        variant_map = {
+            "callout": "callout",
+            "default": "callout",
+            "bubble": "callout",
+            "blur": "blurred",
+            "blurred": "blurred",
+            "blurredbackdrop": "blurred",
+            "brand": "brand",
+            "brandpanel": "brand",
+            "cutaway": "cutaway",
+            "black": "cutaway",
+            "typewriter": "typewriter",
+        }
+        normalized_variant = variant_map.get(variant_key)
+        if normalized_variant in HIGHLIGHT_VARIANTS:
+            highlight["variant"] = normalized_variant
+
     sfx_value = raw.get("sfx") or raw.get("asset") or raw.get("sound")
     sfx_name = normalize_sfx_name(sfx_value)
     if sfx_name:
+        if not sfx_name.lower().startswith("assets/"):
+            if sfx_name.lower().startswith("sfx/"):
+                sfx_name = f"assets/{sfx_name}"
+            else:
+                sfx_name = f"assets/sfx/{sfx_name}"
         highlight["sfx"] = sfx_name
 
     volume = raw.get("volume")
@@ -429,6 +471,16 @@ def normalize_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
             )
             if transition_out:
                 segment_plan["transitionOut"] = transition_out
+
+            metadata_raw = raw_segment.get("metadata")
+            metadata_camera = metadata_raw.get("cameraMovement") if isinstance(metadata_raw, dict) else None
+            camera_movement = normalize_camera_movement(
+                raw_segment.get("cameraMovement")
+                or raw_segment.get("camera_movement")
+                or metadata_camera
+            )
+            if camera_movement:
+                segment_plan["cameraMovement"] = camera_movement
 
             timeline_start = ensure_float(
                 raw_segment.get("timelineStart", raw_segment.get("timeline_start")),

@@ -1,8 +1,10 @@
 import {z} from 'zod';
 import type {
+  CameraMovement,
   HighlightAnimation,
   HighlightPlan,
   HighlightPosition,
+  HighlightVariant,
   Plan,
   SegmentPlan,
   TransitionDirection,
@@ -34,6 +36,8 @@ const transitionPlanSchema: z.ZodType<TransitionPlan> = z.object({
   intensity: z.number().positive().optional(),
 });
 
+const cameraMovementSchema: z.ZodType<CameraMovement> = z.enum(['static', 'zoomIn', 'zoomOut']);
+
 const segmentPlanSchema: z.ZodType<SegmentPlan> = z.object({
   id: z.string(),
   sourceStart: z.number().min(0),
@@ -42,6 +46,8 @@ const segmentPlanSchema: z.ZodType<SegmentPlan> = z.object({
   transitionOut: transitionPlanSchema.optional(),
   label: z.string().optional(),
   playbackRate: z.number().positive().optional(),
+  cameraMovement: cameraMovementSchema.optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 const highlightAnimationSchema: z.ZodType<HighlightAnimation> = z.enum([
@@ -51,12 +57,21 @@ const highlightAnimationSchema: z.ZodType<HighlightAnimation> = z.enum([
   'bounce',
   'float',
   'flip',
+  'typewriter',
 ]);
 
 const highlightPositionSchema: z.ZodType<HighlightPosition> = z.enum([
   'top',
   'center',
   'bottom',
+]);
+
+const highlightVariantSchema: z.ZodType<HighlightVariant> = z.enum([
+  'callout',
+  'blurred',
+  'cutaway',
+  'brand',
+  'typewriter',
 ]);
 
 const highlightPlanSchema: z.ZodType<HighlightPlan> = z.object({
@@ -68,6 +83,7 @@ const highlightPlanSchema: z.ZodType<HighlightPlan> = z.object({
   animation: highlightAnimationSchema.optional(),
   sfx: z.string().optional(),
   volume: z.number().min(0).max(1).optional(),
+  variant: highlightVariantSchema.optional(),
 });
 
 const planSchema: z.ZodType<Plan> = z.object({
@@ -84,41 +100,66 @@ export const planExample: Plan = {
     {
       id: 'intro',
       sourceStart: 0,
-      duration: 20,
+      duration: 18,
       transitionOut: {type: 'crossfade', duration: 1},
+      cameraMovement: 'zoomIn',
     },
     {
       id: 'main-1',
       sourceStart: 30,
-      duration: 45,
+      duration: 32,
       transitionIn: {type: 'crossfade', duration: 1},
       transitionOut: {type: 'slide', duration: 0.75, direction: 'left'},
+      cameraMovement: 'zoomOut',
     },
     {
       id: 'main-2',
       sourceStart: 90,
-      duration: 35,
+      duration: 20,
       transitionIn: {type: 'slide', duration: 0.75, direction: 'right'},
+      cameraMovement: 'zoomIn',
     },
   ],
   highlights: [
     {
       id: 'hook',
-      text: 'Điểm nhấn chính xuất hiện!',
-      start: 5,
+      text: 'Tăng gấp đôi hiệu suất với workflow tự động hoá.',
+      start: 4.5,
       duration: 4,
       position: 'center',
-      animation: 'zoom',
+      animation: 'fade',
+      variant: 'blurred',
       sfx: 'ui/pop.mp3',
     },
     {
       id: 'stat',
-      text: 'Số liệu quan trọng được giới thiệu.',
-      start: 52,
-      duration: 5,
+      text: '48 giờ sản xuất video chỉ còn 6 giờ.',
+      start: 22,
+      duration: 4.5,
       position: 'bottom',
       animation: 'slide',
+      variant: 'brand',
       sfx: 'whoosh/whoosh.mp3',
+    },
+    {
+      id: 'quote',
+      text: '"Khách hàng yêu thích trải nghiệm cá nhân hoá từng phút."',
+      start: 39,
+      duration: 5,
+      position: 'top',
+      animation: 'zoom',
+      variant: 'cutaway',
+      sfx: 'emotion/applause.mp3',
+    },
+    {
+      id: 'cta',
+      text: 'Đăng ký demo ngay hôm nay',
+      start: 68,
+      duration: 5,
+      position: 'center',
+      animation: 'typewriter',
+      variant: 'typewriter',
+      sfx: 'tech/notification.mp3',
     },
   ],
 };
