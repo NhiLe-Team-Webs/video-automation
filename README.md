@@ -22,11 +22,11 @@ This project stitches together Remotion, MoviePy, Auto-Editor, Whisper, and a ge
    cd python-be
    ./run_all.sh                     # or run_all.sh on Windows
    ```
-   The script generates `outputs/plan.json`, copies it to `remotion-app/public/plan.json`, and copies the trimmed video to `remotion-app/public/input.mp4`.
+   The script generates `outputs/plan.json`, copies it to `public/input/plan.json`, and copies the trimmed video to `public/input/input.mp4` so Remotion can pick them up automatically.
    Shared media (SFX, b-roll, fonts) live in the repository-level `assets/` directory so both pipelines stay in sync.
 
 2. **Manual data prep**
-   If you prefer to supply assets manually, place your video and plan file inside `remotion-app/public/`. The folder includes `plan.sample.json` as a reference:
+   If you prefer to supply assets manually, place your video and plan file inside the shared `public/input/` folder. It includes `plan.sample.json` as a reference:
 
 ```json
 {
@@ -72,12 +72,12 @@ This project stitches together Remotion, MoviePy, Auto-Editor, Whisper, and a ge
 }
 ```
 
-3. Place your sound-effect files (and other shared media) in the repository-level `assets/` directory. The Remotion app symlinks `assets/` into `remotion-app/public/assets/`, and both pipelines resolve SFX using paths such as `assets/sfx/ui/pop.mp3`.
+3. Place your sound-effect files (and other shared media) in the repository-level `assets/` directory. The Remotion sync script links `assets/` into the shared `public/assets/` workspace, and both pipelines resolve SFX using paths such as `assets/sfx/ui/pop.mp3`.
 
-> **Note:** Remotion automatically looks for `plan.json` in the `public/` folder. If you want to render from a different location, pass custom props when running the Remotion CLI:
+> **Note:** Remotion automatically loads `input/plan.json` and `input/input.mp4` from the shared `public/` folder. If you want to render from a different location, pass custom props when running the Remotion CLI:
 >
 > ```bash
-> npx remotion render src/Root.tsx FinalVideo out/final.mp4 --props '{"planPath":"custom-plan.json","inputVideo":"input.mp4"}'
+> npx remotion render src/Root.tsx FinalVideo out/final.mp4 --props '{"planPath":"custom-plan.json","inputVideo":"custom-input.mp4"}'
 > ```
 
 If the final video is longer than 15 minutes, update `DEFAULT_DURATION_IN_FRAMES` in `remotion-app/src/config.ts` to match the new duration.
@@ -94,7 +94,7 @@ npm run render     # Produce out/final.mp4
 
 The exported video is saved to `remotion-app/out/final.mp4`.
 
-> **Tip:** The Remotion `pre*` scripts automatically sync the repository-level `assets/` folder into `remotion-app/public/assets/` (via symlink or copy) before previewing or rendering.
+> **Tip:** The Remotion `pre*` scripts automatically sync the repository-level `assets/` folder into `public/assets/` and link `remotion-app/public` to the shared workspace before previewing or rendering.
 
 ## Remotion structure
 

@@ -43,8 +43,8 @@ const PlanAwareTimeline: React.FC<{
 
 export const FinalComposition: React.FC<FinalCompositionProps> = ({
   plan,
-  planPath = 'plan.json',
-  inputVideo = 'input.mp4',
+  planPath = 'input/plan.json',
+  inputVideo = 'input/input.mp4',
   fallbackTransitionDuration = DEFAULT_TRANSITION_SECONDS,
   highlightTheme,
 }) => {
