@@ -1,0 +1,29 @@
+{
+  "name": "video-automation-remotion",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "sync-assets": "node ./scripts/sync-assets.mjs",
+    "prestart": "npm run sync-assets",
+    "start": "remotion preview",
+    "prebuild": "npm run sync-assets",
+    "build": "remotion render --log=info",
+    "prerender": "npm run sync-assets",
+    "render": "remotion render src/Root.tsx FinalVideo out/final.mp4"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.61",
+    "@remotion/cli": "4.0.61",
+    "@remotion/player": "4.0.61",
+    "@remotion/renderer": "4.0.61",
+    "@types/react": "18.2.47",
+    "@types/react-dom": "18.2.17",
+    "remotion": "4.0.61",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "5.3.3"
+  }
+}

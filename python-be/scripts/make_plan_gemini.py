@@ -16,30 +16,67 @@ from dotenv import load_dotenv
 TIMECODE_RE = re.compile(r"^(?P<start>\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(?P<end>\d{2}:\d{2}:\d{2},\d{3})$")
 JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
-AVAILABLE_SFX: Dict[str, str] = {
-    "applause.mp3": "assets/sfx/emotion/applause.mp3",
-    "boing.mp3": "assets/sfx/cartoon/boing.mp3",
-    "cartoon-slip.mp3": "assets/sfx/cartoon/cartoon-slip.mp3",
-    "throw.mp3": "assets/sfx/cartoon/throw.mp3",
-    "shock.mp3": "assets/sfx/emotion/shock.mp3",
-    "disapointed.mp3": "assets/sfx/emotion/disapointed.mp3",
-    "ding.mp3": "assets/sfx/emphasis/ding.mp3",
-    "camera-click.mp3": "assets/sfx/tech/camera-click.mp3",
-    "tech-notification.mp3": "assets/sfx/tech/notification.mp3",
-    "bubble-pop.mp3": "assets/sfx/ui/bubble-pop.mp3",
-    "keyboard-typing.mp3": "assets/sfx/ui/keyboard-typing.mp3",
-    "mouse-click.mp3": "assets/sfx/ui/mouse-click.mp3",
-    "ui-notification.mp3": "assets/sfx/ui/notification.mp3",
-    "pop.mp3": "assets/sfx/ui/pop.mp3",
-    "swipe.mp3": "assets/sfx/ui/swipe.mp3",
-    "woosh.mp3": "assets/sfx/whoosh/woosh.mp3",
+SFX_EXTENSIONS = {".mp3", ".wav", ".ogg"}
+
+
+def _humanize_sfx_description(relative_path: Path) -> str:
+    category = relative_path.parent.name if relative_path.parent != Path(".") else "mix"
+    base = relative_path.stem.replace("-", " ").replace("_", " ")
+    category_title = category.replace("-", " ").replace("_", " ").title()
+    base_title = base.title()
+    return f"{category_title}: {base_title}"
+
+
+def discover_available_sfx() -> Dict[str, str]:
+    root_dir = Path(__file__).resolve().parents[2]
+    sfx_dir = root_dir / "assets" / "sfx"
+    available: Dict[str, str] = {}
+
+    if not sfx_dir.exists():
+        return available
+
+    for asset in sorted(sfx_dir.rglob("*")):
+        if not asset.is_file() or asset.suffix.lower() not in SFX_EXTENSIONS:
+            continue
+        relative_path = asset.relative_to(sfx_dir)
+        key = relative_path.as_posix()
+        description = _humanize_sfx_description(relative_path)
+        available[key] = description
+        prefixed_key = f"assets/sfx/{key}"
+        available[prefixed_key] = description
+
+    return available
+
+
+AVAILABLE_SFX: Dict[str, str] = discover_available_sfx() or {
+    "ui/pop.mp3": "UI: Pop punchy nhấn mạnh",
+    "whoosh/whoosh.mp3": "Whoosh chuyển cảnh mượt",
+    "emphasis/ding.mp3": "Ding sạch cho số liệu quan trọng",
+    "emotion/applause.mp3": "Applause nhanh cho thành tựu",
+    "tech/camera-click.mp3": "Tiếng chụp ảnh nhấn mạnh demo",
 }
-AVAILABLE_TRANSITION_ASSETS: Dict[str, str] = {}
-TRANSITION_STYLES = ["flash-white", "dip-to-black", "spotlight-rise"]
-CAPTION_STYLES = ["highlight-yellow", "center-pop", "lower-third"]
-MAX_RECOMMENDED_ZOOMS = 6
-MIN_ZOOM_GAP_SECONDS = 8.0
-MAX_CAPTION_ACTIONS = 5
+
+
+def _build_sfx_lookup() -> Dict[str, str]:
+    lookup: Dict[str, str] = {}
+    for key in AVAILABLE_SFX.keys():
+        lower_key = key.lower()
+        lookup.setdefault(lower_key, key)
+        name = Path(key).name.lower()
+        lookup.setdefault(name, key)
+        stem = Path(key).stem.lower()
+        lookup.setdefault(stem, key)
+    return lookup
+
+
+SFX_LOOKUP = _build_sfx_lookup()
+TRANSITION_TYPES = ["cut", "crossfade", "slide", "zoom", "scale", "rotate", "blur"]
+TRANSITION_DIRECTIONS = ["left", "right", "up", "down"]
+HIGHLIGHT_POSITIONS = ["top", "center", "bottom"]
+HIGHLIGHT_ANIMATIONS = ["fade", "zoom", "slide", "bounce", "float", "flip", "typewriter"]
+HIGHLIGHT_VARIANTS = ["callout", "blurred", "brand", "cutaway", "typewriter"]
+MAX_HIGHLIGHTS = 6
+DEFAULT_HIGHLIGHT_DURATION = 2.6
 
 
 @dataclass
@@ -95,71 +132,70 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
 
     schema_hint = {
         "segments": [
-            {"start": 0.0, "end": 6.4, "timeline_start": 0.0}
+            {
+                "id": "intro",
+                "sourceStart": 0.0,
+                "duration": 6.4,
+                "transitionOut": {"type": "crossfade", "duration": 0.6},
+            },
+            {
+                "id": "demo",
+                "sourceStart": 6.4,
+                "duration": 9.1,
+                "transitionIn": {"type": "crossfade", "duration": 0.6},
+                "transitionOut": {"type": "slide", "duration": 0.5, "direction": "left"},
+            },
         ],
-        "actions": [
+        "highlights": [
             {
-                "type": "zoom",
-                "start": 1.5,
-                "end": 4.2,
-                "scale": 1.18,
-            },
-            {
-                "type": "sfx",
-                "asset": "assets/sfx/ding.mp3",
-                "time": 4.2,
-            },
-            {
-                "type": "caption",
+                "id": "hook",
                 "text": "KEY IDEA: Stay consistent",
-                "time": 4.2,
-                "duration": 2.2,
-                "style": "highlight-yellow",
-            },
-            {
-                "type": "transition",
-                "style": "flash-white",
-                "time": 6.4,
-                "duration": 0.45,
-            },
+                "start": 2.4,
+                "duration": 2.6,
+                "position": "center",
+                "animation": "zoom",
+                "sfx": "ui/pop.mp3",
+                "volume": 0.75,
+            }
         ],
-        "audio": {"filters": {"highpass_hz": 120.0, "lowpass_hz": None}},
-        "meta": {
-            "style": "motivational",
-            "notes": ["trim long pauses"],
-        },
     }
 
-    sfx_options = _format_available(AVAILABLE_SFX.values())
     sfx_names = _format_available(AVAILABLE_SFX.keys())
-    transition_styles = _format_available(TRANSITION_STYLES)
-    caption_styles = _format_available(CAPTION_STYLES)
+    sfx_notes = "; ".join(f"{name}: {desc}" for name, desc in AVAILABLE_SFX.items())
+    transition_types = _format_available(TRANSITION_TYPES)
+    transition_directions = _format_available(TRANSITION_DIRECTIONS)
+    highlight_positions = _format_available(HIGHLIGHT_POSITIONS)
+    highlight_animations = _format_available(HIGHLIGHT_ANIMATIONS)
 
     instructions = (
-        "You are an assistant video editor. Create a JSON plan that trims filler pauses, "
-        "groups sentences into engaging segments, and layers in tasteful zooms, highlight captions, sound effects, and transitions. "
-        "Pick SFX from the library in assets/sfx to match the emotion (applause for big wins, woosh/swipe for movement, cartoon hits for humor). "
-        "Use smooth zooms (1.1-1.22) on the most impactful statements, and reserve transitions for clear topic or energy shifts. "
-        "Limit highlight captions to the strongest takeaways and keep the edit feeling cinematic, not hectic."
+        "Bạn là editor phụ trợ. Tạo JSON plan cho Remotion với các segment cắt gọn, transition mượt, highlight text và SFX hợp lý. "
+        "Giữ tổng thể cinematic, tránh spam hiệu ứng."
     )
     if extra_instructions:
         instructions += f" Extra guidance from user: {extra_instructions.strip()}"
 
     prompt = (
         f"{instructions}\n\n"
-        "Output strictly valid JSON using this schema (example values shown, update as needed):\n"
+        "Xuất JSON hợp lệ đúng schema (ví dụ dưới chỉ minh họa, hãy cập nhật giá trị thực tế):\n"
         f"{json.dumps(schema_hint, indent=2)}\n\n"
         "Rules:\n"
-        "- `segments` hold chronological sections with `start`, `end`, `timeline_start` (floats in seconds).\n"
-        "- Trim or merge entries when pauses exceed ~0.7s unless the silence is dramatic.\n"
-        f"- Keep the number of `zoom` actions <= {MAX_RECOMMENDED_ZOOMS} and space them >= {MIN_ZOOM_GAP_SECONDS}s apart. Use scale between 1.1 and 1.22.\n"
-        "- Use `sfx` objects with `asset` + `time` (seconds). Assets must live under `assets/sfx/` in this project. Available assets: " + sfx_options + " (names: " + sfx_names + "). Match tone to category (e.g., `applause.mp3` for wins, `woosh.mp3` for motion, `bubble-pop.mp3` for playful emphasis).\n"
-        "- Add highlight `caption` actions (with `text`, `time`, `duration`, optional `style`) for the biggest takeaways. Allowed styles: " + caption_styles + ". Keep captions short (2-4s) and no more than " + str(MAX_CAPTION_ACTIONS) + " total. Pair key captions with supportive SFX.\n"
-        "- `transition` actions may specify an `asset` (video overlay) or a `style` from: " + transition_styles + ". Use them sparingly to bridge major section changes, ideally with complementary SFX.\n"
-        "- Keep `timeline_start` contiguous (no gaps).\n"
-        "- Use floats for all times/durations.\n"
-        "- Include optional `notes` inside `meta` for human editors.\n"
-        "Respond with JSON only inside a single code block.\n\n"
+        "- `segments` chứa các đoạn theo timeline với `sourceStart` (giây trong video gốc) và `duration`. Có thể thêm `label` mô tả ngắn.\n"
+        "- `transitionIn`/`transitionOut` dùng `type` thuộc: "
+        + transition_types
+        + "; nếu `type` là `slide` có thể thêm `direction`: "
+        + transition_directions
+        + "; với `zoom`/`scale`/`rotate`/`blur` có thể set `intensity` trong khoảng 0.1-0.35 để kiểm soát độ mạnh.\n"
+        "- Trim/merge câu khi khoảng lặng > ~0.7s trừ khi cần giữ nhịp cảm xúc.\n"
+        f"- Chỉ tạo tối đa {MAX_HIGHLIGHTS} highlight mạnh nhất. Duy trì mỗi highlight 2-4s.\n"
+        "- `highlights` gồm `text`, `start`, `duration`, `position` (" + highlight_positions + "), `animation` (" + highlight_animations + "), `variant` (blurred/brand/cutaway/typewriter) và `sfx` nếu cần.\n"
+        "- SFX phải chọn từ thư viện assets/sfx với path tương đối (vd: assets/sfx/ui/pop.mp3 hoặc ui/pop.mp3). Danh sách: "
+        + sfx_names
+        + ". Gợi ý: "
+        + sfx_notes
+        + "\n"
+        "- Nếu highlight có SFX, đặt `start` khớp moment cần nhấn và cân nhắc `volume` (0-1).\n"
+        "- Đảm bảo các segment nối tiếp nhau không bị gap thời gian.\n"
+        "- Chỉ trả về JSON trong một code block.\n\n"
         "Transcript segments (ordered):\n"
         f"{transcript_section}\n"
     )
@@ -191,124 +227,297 @@ def ensure_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
-def resolve_catalog(asset: str | None, catalog: Dict[str, str], prefix: str) -> str | None:
-    if not asset:
+def normalize_sfx_name(value: Any) -> str | None:
+    if value is None:
         return None
-    if asset in catalog:
-        return catalog[asset]
-    if asset.startswith("assets/"):
-        return asset
-    return f"{prefix}{asset}"
+    candidate = str(value).strip()
+    if not candidate:
+        return None
+    candidate_normalized = candidate.replace("\\", "/").lstrip("./")
+    if candidate_normalized.startswith("assets/"):
+        candidate_normalized = candidate_normalized[7:]
+    if candidate_normalized.startswith("sfx/"):
+        candidate_normalized = candidate_normalized[4:]
+
+    checks = [
+        candidate_normalized.lower(),
+        Path(candidate_normalized).name.lower(),
+        Path(candidate_normalized).stem.lower(),
+    ]
+
+    for key in checks:
+        if not key:
+            continue
+        match = SFX_LOOKUP.get(key)
+        if match:
+            return match
+
+    return None
+
+
+def normalize_camera_movement(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().lower().replace(" ", "").replace("-", "").replace("_", "")
+    if normalized in {"zoomin", "pushin", "push"}:
+        return "zoomIn"
+    if normalized in {"zoomout", "pullback", "pull"}:
+        return "zoomOut"
+    return None
+
+
+def normalize_transition(value: Any) -> Dict[str, Any] | None:
+    if value is None:
+        return None
+
+    transition_type = None
+    direction = None
+    duration_value = None
+    intensity_value = None
+
+    if isinstance(value, str):
+        transition_type = value.lower()
+    elif isinstance(value, dict):
+        transition_type = (value.get("type") or value.get("style") or "").lower()
+        direction = (value.get("direction") or value.get("dir") or "").lower() or None
+        duration_value = ensure_float(value.get("duration", value.get("length", 0.0)), 0.0)
+        intensity_value = ensure_float(value.get("intensity", value.get("strength", 0.0)), 0.0)
+    else:
+        return None
+
+    if transition_type in {"fade", "dissolve"}:
+        transition_type = "crossfade"
+    elif transition_type in {"slide-left", "slide-right", "slide-up", "slide-down"}:
+        for candidate in TRANSITION_DIRECTIONS:
+            if candidate in transition_type:
+                direction = candidate
+                break
+        transition_type = "slide"
+
+    elif transition_type in {"zoom-in", "zoom-out", "push", "push-in", "push-out", "punch", "punch-in", "punch-out"}:
+        transition_type = "zoom"
+    elif transition_type in {"scale-up", "scale-down", "grow", "shrink"}:
+        transition_type = "scale"
+    elif transition_type in {"spin", "twist", "turn"}:
+        transition_type = "rotate"
+    elif transition_type in {"focus", "defocus", "dream", "soft-focus", "soften"}:
+        transition_type = "blur"
+
+    if transition_type not in TRANSITION_TYPES:
+        transition_type = "cut"
+
+    if transition_type == "cut":
+        return {"type": "cut"}
+
+    duration_value = duration_value if duration_value and duration_value > 0 else 0.6
+    duration_value = max(0.1, min(duration_value, 3.0))
+
+    if intensity_value is not None and intensity_value <= 0:
+        intensity_value = None
+    if intensity_value is not None:
+        intensity_value = round(max(0.05, min(float(intensity_value), 0.6)), 3)
+
+    transition: Dict[str, Any] = {
+        "type": transition_type,
+        "duration": round(duration_value, 3),
+    }
+
+    if transition_type == "slide" and direction in TRANSITION_DIRECTIONS:
+        transition["direction"] = direction
+
+    if transition_type in {"zoom", "scale", "rotate", "blur"} and intensity_value:
+        transition["intensity"] = intensity_value
+
+    return transition
+
+
+def normalize_highlight_item(raw: Dict[str, Any], index: int) -> Dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+
+    text = (raw.get("text") or raw.get("caption") or raw.get("title") or "").strip()
+    if not text:
+        return None
+
+    start = ensure_float(raw.get("start", raw.get("time", 0.0)), 0.0)
+    start = max(0.0, start)
+
+    duration = ensure_float(raw.get("duration", raw.get("length", 0.0)), DEFAULT_HIGHLIGHT_DURATION)
+    if duration <= 0:
+        end_time = ensure_float(raw.get("end"))
+        if end_time > start:
+            duration = end_time - start
+    if duration <= 0:
+        duration = DEFAULT_HIGHLIGHT_DURATION
+    duration = max(1.5, min(duration, 5.0))
+
+    position = (raw.get("position") or raw.get("placement") or "center").lower()
+    if position not in HIGHLIGHT_POSITIONS:
+        position = "center"
+
+    animation = (raw.get("animation") or raw.get("style") or "fade").lower()
+    if animation not in HIGHLIGHT_ANIMATIONS:
+        animation = "fade"
+
+    highlight = {
+        "id": str(raw.get("id") or f"highlight-{index + 1:02d}"),
+        "text": text,
+        "start": round(start, 3),
+        "duration": round(duration, 3),
+        "position": position,
+        "animation": animation,
+    }
+
+    variant_raw = raw.get("variant") or raw.get("layout") or raw.get("styleVariant")
+    if variant_raw:
+        variant_key = str(variant_raw).strip().lower().replace(" ", "").replace("-", "").replace("_", "")
+        variant_map = {
+            "callout": "callout",
+            "default": "callout",
+            "bubble": "callout",
+            "blur": "blurred",
+            "blurred": "blurred",
+            "blurredbackdrop": "blurred",
+            "brand": "brand",
+            "brandpanel": "brand",
+            "cutaway": "cutaway",
+            "black": "cutaway",
+            "typewriter": "typewriter",
+        }
+        normalized_variant = variant_map.get(variant_key)
+        if normalized_variant in HIGHLIGHT_VARIANTS:
+            highlight["variant"] = normalized_variant
+
+    sfx_value = raw.get("sfx") or raw.get("asset") or raw.get("sound")
+    sfx_name = normalize_sfx_name(sfx_value)
+    if sfx_name:
+        if not sfx_name.lower().startswith("assets/"):
+            if sfx_name.lower().startswith("sfx/"):
+                sfx_name = f"assets/{sfx_name}"
+            else:
+                sfx_name = f"assets/sfx/{sfx_name}"
+        highlight["sfx"] = sfx_name
+
+    volume = raw.get("volume")
+    if volume is not None:
+        try:
+            volume_float = float(volume)
+        except (TypeError, ValueError):
+            volume_float = None
+        if volume_float is not None:
+            volume_float = max(0.0, min(volume_float, 1.0))
+            highlight["volume"] = round(volume_float, 3)
+
+    return highlight
 
 
 def normalize_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(plan, dict):
         raise ValueError("Plan must be a JSON object.")
 
-    segments = plan.get("segments")
-    if isinstance(segments, list):
-        for segment in segments:
-            if not isinstance(segment, dict):
+    segment_items: List[tuple[float, Dict[str, Any]]] = []
+    raw_segments = plan.get("segments")
+    if isinstance(raw_segments, list):
+        for index, raw_segment in enumerate(raw_segments):
+            if not isinstance(raw_segment, dict):
                 continue
-            for key in ("start", "end", "timeline_start"):
-                if key in segment:
-                    segment[key] = ensure_float(segment.get(key))
-        segments.sort(key=lambda seg: seg.get("timeline_start", seg.get("start", 0.0)))
-
-    normalized_actions: List[Dict[str, Any]] = []
-    zoom_count = 0
-    last_zoom_time = -1e9
-    caption_count = 0
-
-    for raw_action in plan.get("actions", []):
-        if not isinstance(raw_action, dict):
-            continue
-        action_type = (raw_action.get("type") or "").lower()
-        if not action_type:
-            continue
-        action: Dict[str, Any] = dict(raw_action)
-        action["type"] = action_type
-
-        if action_type == "zoom":
-            start_time = ensure_float(action.get("start", action.get("time")))
-            end_time = ensure_float(action.get("end", start_time + 1.5))
-            if end_time <= start_time:
-                end_time = start_time + 1.2
-            scale = ensure_float(action.get("scale", 1.14))
-            scale = max(1.05, min(1.22, scale))
-            if zoom_count >= MAX_RECOMMENDED_ZOOMS or start_time - last_zoom_time < MIN_ZOOM_GAP_SECONDS:
-                continue
-            last_zoom_time = start_time
-            zoom_count += 1
-            action.update({"start": start_time, "end": end_time, "scale": scale})
-            action.pop("time", None)
-            for key in ("source_start", "source_end"):
-                if key in action:
-                    action[key] = ensure_float(action.get(key))
-
-        elif action_type == "sfx":
-            asset = action.get("asset") or action.get("name")
-            asset = resolve_catalog(asset, AVAILABLE_SFX, "assets/sfx/")
-            time_value = ensure_float(action.get("time", action.get("start")))
-            action = {"type": "sfx", "asset": asset, "time": time_value}
-
-        elif action_type == "transition":
-            asset = action.get("asset") or action.get("name")
-            asset = resolve_catalog(asset, AVAILABLE_TRANSITION_ASSETS, "assets/transition/")
-            style = (action.get("style") or "").lower()
-            if style and style not in TRANSITION_STYLES:
-                style = TRANSITION_STYLES[0]
-            if not style and not asset:
-                style = TRANSITION_STYLES[0]
-            time_value = ensure_float(action.get("time", action.get("start")))
-            duration = max(0.25, ensure_float(action.get("duration", action.get("length", 0.5))))
-            duration = max(0.3, min(duration, 1.0))
-            action = {
-                "type": "transition",
-                "time": time_value,
-                "duration": duration,
-                "asset": asset,
-                "style": style or None,
-            }
-
-        elif action_type == "caption":
-            if caption_count >= MAX_CAPTION_ACTIONS:
-                continue
-            text = (action.get("text") or action.get("title") or "").strip()
-            if not text:
-                continue
-            time_value = ensure_float(action.get("time", action.get("start")))
-            duration = ensure_float(action.get("duration"))
-            if not duration and action.get("end") is not None:
-                duration = ensure_float(action.get("end")) - time_value
+            source_start = ensure_float(
+                raw_segment.get("sourceStart", raw_segment.get("start", 0.0)),
+                0.0,
+            )
+            duration = ensure_float(raw_segment.get("duration"))
             if duration <= 0:
-                duration = 2.5
-            duration = max(1.5, min(duration, 5.0))
-            style = (action.get("style") or CAPTION_STYLES[0]).lower()
-            if style not in CAPTION_STYLES:
-                style = CAPTION_STYLES[0]
-            position = action.get("position")
-            action = {
-                "type": "caption",
-                "text": text,
-                "time": time_value,
-                "duration": duration,
-                "style": style,
+                end_value = ensure_float(raw_segment.get("end"))
+                start_value = ensure_float(raw_segment.get("start", source_start))
+                if end_value > start_value:
+                    duration = end_value - start_value
+            if duration <= 0:
+                length_value = ensure_float(raw_segment.get("length"))
+                if length_value > 0:
+                    duration = length_value
+            if duration <= 0:
+                continue
+
+            segment_plan: Dict[str, Any] = {
+                "id": str(raw_segment.get("id") or f"segment-{index + 1:02d}"),
+                "sourceStart": round(source_start, 3),
+                "duration": round(duration, 3),
             }
-            if position:
-                action["position"] = position
-            caption_count += 1
 
-        else:
-            normalized_actions.append(action)
-            continue
+            label = (raw_segment.get("label") or raw_segment.get("title") or "").strip()
+            if label:
+                segment_plan["label"] = label
 
-        normalized_actions.append(action)
+            playback_raw = raw_segment.get("playbackRate", raw_segment.get("speed"))
+            if playback_raw is not None:
+                playback_rate = ensure_float(playback_raw, 1.0)
+                if playback_rate <= 0:
+                    playback_rate = 1.0
+                if abs(playback_rate - 1.0) > 1e-3:
+                    segment_plan["playbackRate"] = round(playback_rate, 3)
 
-    plan["actions"] = normalized_actions
-    meta = plan.setdefault("meta", {})
-    meta.setdefault("max_zoom_actions", MAX_RECOMMENDED_ZOOMS)
-    return plan
+            transition_in = normalize_transition(
+                raw_segment.get("transitionIn")
+                or raw_segment.get("transition_in")
+                or raw_segment.get("enterTransition")
+            )
+            if transition_in:
+                segment_plan["transitionIn"] = transition_in
+
+            transition_out = normalize_transition(
+                raw_segment.get("transitionOut")
+                or raw_segment.get("transition_out")
+                or raw_segment.get("exitTransition")
+            )
+            if transition_out:
+                segment_plan["transitionOut"] = transition_out
+
+            metadata_raw = raw_segment.get("metadata")
+            metadata_camera = metadata_raw.get("cameraMovement") if isinstance(metadata_raw, dict) else None
+            camera_movement = normalize_camera_movement(
+                raw_segment.get("cameraMovement")
+                or raw_segment.get("camera_movement")
+                or metadata_camera
+            )
+            if camera_movement:
+                segment_plan["cameraMovement"] = camera_movement
+
+            timeline_start = ensure_float(
+                raw_segment.get("timelineStart", raw_segment.get("timeline_start")),
+                source_start,
+            )
+            segment_items.append((timeline_start, segment_plan))
+
+    segment_items.sort(key=lambda item: (item[0], item[1]["sourceStart"]))
+    normalized_segments = [item[1] for item in segment_items]
+
+    raw_highlights: List[Any] = []
+    if isinstance(plan.get("highlights"), list):
+        raw_highlights = list(plan["highlights"])
+    elif isinstance(plan.get("actions"), list):
+        for action in plan.get("actions", []):
+            if isinstance(action, dict) and (action.get("type") or "").lower() in {"caption", "highlight"}:
+                raw_highlights.append(action)
+
+    normalized_highlights: List[Dict[str, Any]] = []
+    for idx, raw_highlight in enumerate(raw_highlights):
+        normalized = normalize_highlight_item(raw_highlight, idx)
+        if normalized:
+            normalized_highlights.append(normalized)
+        if len(normalized_highlights) >= MAX_HIGHLIGHTS:
+            break
+
+    normalized_highlights.sort(key=lambda item: item.get("start", 0.0))
+
+    normalized_plan: Dict[str, Any] = {
+        "segments": normalized_segments,
+        "highlights": normalized_highlights,
+    }
+
+    if "meta" in plan:
+        normalized_plan["meta"] = plan["meta"]
+
+    return normalized_plan
 
 
 def configure_client(model_name: str | None = None) -> genai.GenerativeModel:

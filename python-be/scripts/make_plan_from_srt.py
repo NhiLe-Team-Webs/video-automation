@@ -9,6 +9,50 @@ from typing import Dict, Iterable, List, Optional
 
 WORD_RE = re.compile(r"[\w']+", re.UNICODE)
 
+HIGHLIGHT_ANIMATIONS = ["zoom", "fade", "slide", "typewriter"]
+HIGHLIGHT_VARIANTS = ["blurred", "callout", "brand", "cutaway", "typewriter"]
+HIGHLIGHT_POSITIONS = ["center", "bottom", "top"]
+
+
+def cycle_choice(options: List[str], index: int) -> str:
+    if not options:
+        return ""
+    return options[index % len(options)]
+
+
+def collapse_text(text: str, max_length: int = 90) -> str:
+    collapsed = " ".join(text.split())
+    if len(collapsed) <= max_length:
+        return collapsed
+    truncated = collapsed[: max_length - 1].rstrip()
+    last_space = truncated.rfind(" ")
+    if last_space > 40:
+        truncated = truncated[:last_space]
+    return f"{truncated}…"
+
+
+def infer_transition_plan(asset: Optional[str], duration: float) -> Dict:
+    transition_type = "crossfade"
+    direction: Optional[str] = None
+    asset_lower = (asset or "").lower()
+
+    if "slide" in asset_lower:
+        transition_type = "slide"
+        for candidate in ("left", "right", "up", "down"):
+            if candidate in asset_lower:
+                direction = candidate
+                break
+    elif "cut" in asset_lower:
+        transition_type = "cut"
+
+    transition: Dict[str, object] = {
+        "type": transition_type,
+        "duration": round_ts(duration),
+    }
+    if direction:
+        transition["direction"] = direction
+    return transition
+
 
 def ensure_list(value: Optional[Iterable]) -> List[str]:
     if value is None:
@@ -417,9 +461,6 @@ def main(argv):
     segment_cfg = mapping["segmenting"]
     transitions_cfg = mapping["transitions"]
     sfx_rules = mapping["actions"].get("sfx", [])
-    zoom_rules = mapping["actions"].get("zoom", [])
-    audio_cfg = mapping["audio"]
-    defaults_cfg = mapping["defaults"]
 
     if not srt_path.exists():
         raise FileNotFoundError(f"SRT file not found: {srt_path}")
@@ -468,13 +509,13 @@ def main(argv):
     transition_default = transitions_cfg.get("default", {})
     transition_rules = transitions_cfg.get("rules", [])
 
-    actions = []
+    highlights: List[Dict] = []
     last_sfx_time = defaultdict(lambda: -math.inf)
-    last_zoom_time = defaultdict(lambda: -math.inf)
 
     for index, segment in enumerate(segments):
         segment_start_timeline = segment["timeline_start"]
         segment_ctx = segment.get("_context")
+        segment["id"] = segment.get("id") or f"segment-{index + 1:02d}"
 
         if index > 0:
             gap = segment["start"] - segments[index - 1]["end"]
@@ -502,22 +543,17 @@ def main(argv):
                     }
 
             if selected_rule:
-                actions.append(
-                    {
-                        "type": "transition",
-                        "time": round_ts(
-                            segment_start_timeline + float(selected_rule.get("offset", 0.0))
-                        ),
-                        "asset": selected_rule.get("asset"),
-                        "duration": round_ts(float(selected_rule.get("duration", 0.5))),
-                    }
+                transition_plan = infer_transition_plan(
+                    selected_rule.get("asset"), float(selected_rule.get("duration", 0.5))
                 )
+                prev_segment = segments[index - 1]
+                prev_segment["transition_out"] = transition_plan
+                segment["transition_in"] = transition_plan
 
         for entry in segment["entries"]:
             if not entry["keep"]:
                 continue
             entry_start_timeline = entry.get("timeline_start", segment_start_timeline)
-            entry_end_timeline = entry_start_timeline + entry["duration"]
             entry_ctx = entry.get("_context")
 
             for rule in sfx_rules:
@@ -530,64 +566,86 @@ def main(argv):
                 if candidate_time - last_sfx_time[cooldown_key] >= float(
                     rule.get("cooldown", 0.0)
                 ):
-                    actions.append(
-                        {
-                            "type": "sfx",
-                            "time": round_ts(candidate_time),
-                            "asset": rule["asset"],
-                            "source_time": round_ts(entry["start"]),
-                        }
-                    )
+                    highlight_index = len(highlights)
+                    highlight_duration = round_ts(min(max(entry["duration"], 1.6), 4.0))
+                    highlight_text = collapse_text(entry.get("raw_text") or "")
+                    if not highlight_text:
+                        highlight_text = "Highlight"
+                    sfx_asset = (rule.get("asset") or "").strip()
+                    sfx_name = None
+                    if sfx_asset:
+                        normalized_asset = sfx_asset.replace("\\", "/")
+                        if normalized_asset.startswith("assets/"):
+                            normalized_asset = normalized_asset[7:]
+                        if normalized_asset.startswith("sfx/"):
+                            normalized_asset = normalized_asset[4:]
+                        sfx_name = normalized_asset or None
+                    start_time = max(0.0, candidate_time)
+                    highlight = {
+                        "id": f"highlight-{highlight_index + 1:02d}",
+                        "text": highlight_text,
+                        "start": round_ts(start_time),
+                        "duration": highlight_duration,
+                        "position": cycle_choice(HIGHLIGHT_POSITIONS, highlight_index),
+                        "animation": cycle_choice(HIGHLIGHT_ANIMATIONS, highlight_index),
+                        "variant": cycle_choice(HIGHLIGHT_VARIANTS, highlight_index),
+                    }
+                    if sfx_name:
+                        if not sfx_name.lower().startswith("assets/"):
+                            if sfx_name.lower().startswith("sfx/"):
+                                sfx_name = f"assets/{sfx_name}"
+                            else:
+                                sfx_name = f"assets/sfx/{sfx_name}"
+                        highlight["sfx"] = sfx_name
+                    if rule.get("volume") is not None:
+                        try:
+                            volume = float(rule.get("volume"))
+                            if 0 <= volume <= 1:
+                                highlight["volume"] = volume
+                        except (TypeError, ValueError):
+                            pass
+                    highlights.append(highlight)
                     last_sfx_time[cooldown_key] = candidate_time
                     break
 
-            for rule in zoom_rules:
-                if entry["duration"] < rule.get("min_duration", 0.0):
-                    continue
-                if not action_rule_matches(rule, entry_ctx, segment_ctx):
-                    continue
-                cooldown_key = rule.get("_cooldown_key")
-                if entry_start_timeline - last_zoom_time[cooldown_key] < float(
-                    rule.get("cooldown", 0.0)
-                ):
-                    continue
-                actions.append(
-                    {
-                        "type": "zoom",
-                        "start": round_ts(entry_start_timeline),
-                        "end": round_ts(entry_end_timeline),
-                        "scale": float(rule.get("scale", defaults_cfg.get("zoom_scale", 1.1))),
-                        "source_start": round_ts(entry["start"]),
-                        "source_end": round_ts(entry["end"]),
-                    }
-                )
-                last_zoom_time[cooldown_key] = entry_start_timeline
-                break
-
-    exported_segments = [
-        {
-            "start": round_ts(segment["start"]),
-            "end": round_ts(segment["end"]),
-            "timeline_start": round_ts(segment["timeline_start"]),
+    exported_segments = []
+    for index, segment in enumerate(segments):
+        segment_plan = {
+            "id": segment.get("id") or f"segment-{index + 1:02d}",
+            "sourceStart": round_ts(segment["start"]),
+            "duration": round_ts(segment["end"] - segment["start"]),
+            "transitionIn": segment.get("transition_in"),
+            "transitionOut": segment.get("transition_out"),
         }
-        for segment in segments
-    ]
+
+        label_text = ""
+        for entry in segment.get("entries", []):
+            candidate = collapse_text(entry.get("raw_text") or "", max_length=60)
+            if candidate:
+                label_text = candidate
+                break
+        if label_text:
+            segment_plan["label"] = label_text
+
+        exported_segments.append(segment_plan)
+
+    for segment in exported_segments:
+        if segment.get("transitionIn") is None:
+            segment.pop("transitionIn", None)
+        if segment.get("transitionOut") is None:
+            segment.pop("transitionOut", None)
+
+    highlights.sort(key=lambda item: item.get("start", 0.0))
 
     plan = {
         "segments": exported_segments,
-        "actions": actions,
-        "audio": {
-            "filters": {
-                key: value
-                for key, value in audio_cfg.get("filters", {}).items()
-                if value is not None
-            }
-        },
+        "highlights": highlights,
         "meta": {
             "source_srt": str(srt_path),
             "entries_total": len(entries),
             "segments_kept": len(exported_segments),
             "timeline_duration": round_ts(timeline_cursor),
+            "highlights_total": len(highlights),
         },
     }
 

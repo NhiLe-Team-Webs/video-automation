@@ -11,3 +11,6 @@ out
 *.mp4
 *.srt
 plan.json
+__pycache__/
+*.pyc
+remotion-app/public/assets
