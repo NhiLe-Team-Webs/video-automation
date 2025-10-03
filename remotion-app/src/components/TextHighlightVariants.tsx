@@ -1,351 +1,258 @@
 import type {CSSProperties, ReactNode} from 'react';
-import {AbsoluteFill, Easing, interpolate} from 'remotion';
-import type {
-  HighlightAnimation,
-  HighlightPlan,
-  HighlightPosition,
-  HighlightTheme,
-  HighlightVariant,
-} from '../types';
-import {BRAND_COLORS, BRAND_FONT_FAMILY, BRAND_OVERLAY_GRADIENT} from '../design/brand';
+import {AbsoluteFill, Easing} from 'remotion';
+import {BRAND} from '../config';
+import type {HighlightPlan, HighlightTheme, HighlightType, HighlightPosition} from '../types';
 
 const POSITION_STYLES: Record<HighlightPosition, CSSProperties> = {
-  top: {justifyContent: 'flex-start', paddingTop: 120},
-  center: {justifyContent: 'center'},
-  bottom: {justifyContent: 'flex-end', paddingBottom: 120},
+  top: {justifyContent: 'flex-start', alignItems: 'center', paddingTop: 140},
+  center: {justifyContent: 'center', alignItems: 'center'},
+  bottom: {justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 140},
 };
 
-const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
-const easeInOut = (value: number) => Easing.bezier(0.4, 0, 0.2, 1)(clamp01(value));
+const ease = Easing.bezier(0.42, 0, 0.21, 1);
 
-const computeAnimationTransform = (
-  animation: HighlightAnimation,
-  appear: number,
-  exit: number,
-  theme: HighlightTheme | undefined
-): CSSProperties => {
-  const appearProgress = easeInOut(appear);
-  const exitProgress = easeInOut(exit);
-  const exitNormalized = 1 - exitProgress;
-  const accent = theme?.accentColor ?? BRAND_COLORS.accent;
-
-  switch (animation) {
-    case 'zoom': {
-      const scale = interpolate(appearProgress, [0, 1], [0.82, 1.02], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      });
-      const disappearScale = 1 - exitNormalized * 0.12;
-      return {transform: `scale(${scale * disappearScale})`};
-    }
-    case 'slide': {
-      const enterTranslate = interpolate(appearProgress, [0, 1], [50, 0], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      });
-      const exitTranslate = interpolate(exitNormalized, [0, 1], [0, -60], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      });
-      return {transform: `translateY(${enterTranslate + exitTranslate}px)`};
-    }
-    case 'bounce': {
-      const bounce = Math.sin(appearProgress * Math.PI);
-      const lift = -bounce * 32 * exitProgress;
-      const scale = 1 + bounce * 0.18;
-      const settleScale = 1 - exitNormalized * 0.15;
-      return {
-        transform: `translateY(${lift}px) scale(${scale * settleScale})`,
-        filter: `drop-shadow(0 18px 30px rgba(0,0,0,0.25)) drop-shadow(0 0 26px ${accent})`,
-      };
-    }
-    case 'float': {
-      const driftX = Math.sin(appearProgress * Math.PI * 1.5) * 18 * exitProgress;
-      const driftY = -interpolate(appearProgress, [0, 1], [0, 48], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      }) * exitProgress;
-      const shimmer = 1 + Math.sin((appearProgress + exitNormalized) * Math.PI) * 0.05;
-      return {
-        transform: `translate(${driftX}px, ${driftY}px) scale(${shimmer})`,
-        filter: `drop-shadow(0 18px 30px rgba(0,0,0,0.25)) drop-shadow(0 0 32px ${accent}) saturate(${1 + appearProgress * 0.2})`,
-      };
-    }
-    case 'flip': {
-      const rotate = interpolate(appearProgress, [0, 1], [-80, 0], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      });
-      const exitRotate = interpolate(exitNormalized, [0, 1], [0, 50], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      });
-      const scale = 1 - exitNormalized * 0.1;
-      return {
-        transform: `perspective(1400px) rotateX(${rotate + exitRotate}deg) scale(${scale})`,
-        transformStyle: 'preserve-3d',
-      };
-    }
-    case 'typewriter':
-    case 'fade':
-    default:
-      return {};
-  }
-};
-
-interface HighlightVariantContext {
+interface HighlightRenderContext {
   highlight: HighlightPlan;
-  theme?: HighlightTheme;
   appear: number;
   exit: number;
-  animation: HighlightAnimation;
+  theme?: HighlightTheme;
   width: number;
   height: number;
 }
 
-type HighlightRenderer = (context: HighlightVariantContext) => ReactNode;
+type HighlightRenderer = (context: HighlightRenderContext) => ReactNode;
 
-const getContainerStyle = (
-  position: HighlightPosition | undefined,
-  theme: HighlightTheme | undefined
-): CSSProperties => ({
-  width: '100%',
-  height: '100%',
-  display: 'flex',
-  alignItems: 'center',
-  color: theme?.textColor ?? BRAND_COLORS.light,
-  fontFamily: theme?.fontFamily ?? BRAND_FONT_FAMILY,
-  boxSizing: 'border-box',
-  padding: '0 4%',
-  pointerEvents: 'none',
-  ...POSITION_STYLES[position ?? 'center'],
-});
+const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
 
-const renderCallout: HighlightRenderer = ({highlight, theme, appear, exit, animation}) => {
-  const opacity = Math.min(appear, exit);
-  const transformStyle = computeAnimationTransform(animation, appear, exit, theme);
-
-  const bubbleStyle: CSSProperties = {
-    background: theme?.backgroundColor ?? 'rgba(0, 0, 0, 0.65)',
-    borderLeft: `6px solid ${theme?.accentColor ?? BRAND_COLORS.accent}`,
-    padding: '32px 48px',
-    borderRadius: 24,
-    fontSize: 52,
-    lineHeight: 1.2,
-    maxWidth: '70%',
-    boxShadow: '0 22px 60px rgba(0, 0, 0, 0.35), 0 0 38px rgba(255, 255, 255, 0.15)',
-    opacity,
-    ...transformStyle,
-    transformOrigin: 'center',
-    backfaceVisibility: 'hidden',
-  };
-
-  return (
-    <div style={getContainerStyle(highlight.position, theme)}>
-      <div style={bubbleStyle}>{highlight.text}</div>
-    </div>
-  );
-};
-
-const renderBlurred: HighlightRenderer = (context) => {
-  const {appear, exit, theme, width, height} = context;
-  const opacity = Math.min(appear, exit);
-  const backdropStyle: CSSProperties = {
+const applyPositioning = (
+  highlight: HighlightPlan,
+  theme: HighlightTheme | undefined,
+  children: ReactNode
+) => {
+  const baseStyle: CSSProperties = {
     position: 'absolute',
     inset: 0,
-    backdropFilter: 'blur(18px)',
-    background: 'rgba(7, 11, 19, 0.55)',
-    opacity,
-  };
-
-  return (
-    <AbsoluteFill>
-      <div style={backdropStyle} />
-      <div style={{position: 'relative', width, height}}>
-        {renderCallout({...context, theme: {...theme, backgroundColor: 'rgba(7, 9, 18, 0.7)'}})}
-      </div>
-    </AbsoluteFill>
-  );
-};
-
-const renderCutaway: HighlightRenderer = ({highlight, appear, exit, theme}) => {
-  const opacity = Math.min(appear, exit);
-  const container: CSSProperties = {
-    ...getContainerStyle('center', theme),
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    textAlign: 'center',
-    pointerEvents: 'none',
-  };
-
-  const textStyle: CSSProperties = {
-    fontSize: 66,
-    fontWeight: 600,
-    lineHeight: 1.25,
-    letterSpacing: 0.8,
-    padding: '0 12%',
-    opacity,
-  };
-
-  return (
-    <AbsoluteFill style={container}>
-      <div style={{height: 6, width: '18%', backgroundColor: theme?.accentColor ?? BRAND_COLORS.accent, marginBottom: 36}} />
-      <div style={textStyle}>{highlight.text}</div>
-    </AbsoluteFill>
-  );
-};
-
-const renderBrand: HighlightRenderer = ({highlight, appear, exit, theme}) => {
-  const opacity = Math.min(appear, exit);
-  const overlay: CSSProperties = {
-    background: BRAND_OVERLAY_GRADIENT,
-    color: BRAND_COLORS.light,
-    fontFamily: theme?.fontFamily ?? BRAND_FONT_FAMILY,
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
+    padding: '0 6%',
+    color: theme?.textColor ?? BRAND.white,
+    fontFamily: theme?.fontFamily ?? "'Inter Tight', 'Inter', sans-serif",
     pointerEvents: 'none',
+    ...POSITION_STYLES[highlight.position ?? 'center'],
   };
 
-  const motifLarge: CSSProperties = {
-    position: 'absolute',
-    top: '-30%',
-    right: '-18%',
-    width: '55%',
-    height: '160%',
-    background: `linear-gradient(145deg, ${BRAND_COLORS.primary} 0%, ${BRAND_COLORS.accent} 100%)`,
-    opacity: 0.85,
-    transform: 'rotate(18deg)',
-    filter: 'drop-shadow(0 38px 90px rgba(0,0,0,0.45))',
-  };
-
-  const motifSmall: CSSProperties = {
-    position: 'absolute',
-    bottom: '-18%',
-    left: '-12%',
-    width: '32%',
-    height: '120%',
-    background: `linear-gradient(135deg, ${BRAND_COLORS.accent} 0%, ${BRAND_COLORS.primary} 100%)`,
-    opacity: 0.6,
-    transform: 'rotate(-22deg)',
-  };
-
-  const textBlock: CSSProperties = {
-    position: 'relative',
-    padding: '60px 72px',
-    borderRadius: 32,
-    background: 'rgba(8, 12, 22, 0.65)',
-    border: `3px solid ${theme?.accentColor ?? BRAND_COLORS.accent}`,
-    boxShadow: '0 24px 90px rgba(0,0,0,0.45)',
-    fontSize: 60,
-    fontWeight: 600,
-    lineHeight: 1.25,
-    maxWidth: '60%',
-    opacity,
-  };
-
-  return (
-    <AbsoluteFill style={overlay}>
-      <div style={motifLarge} />
-      <div style={motifSmall} />
-      <div style={textBlock}>{highlight.text}</div>
-    </AbsoluteFill>
-  );
+  return <div style={baseStyle}>{children}</div>;
 };
 
 const renderTypewriter: HighlightRenderer = ({highlight, appear, exit, theme}) => {
-  const easedAppear = easeInOut(appear);
-  const opacity = Math.min(easedAppear, easeInOut(exit));
-  const totalChars = highlight.text.length || 1;
-  const visibleChars = Math.ceil(totalChars * clamp01(easedAppear));
-  const displayText = highlight.text.slice(0, visibleChars);
-  const caretAlpha = 0.35 + 0.65 * Math.abs(Math.sin(easedAppear * Math.PI * 3));
+  const text = highlight.text ?? '';
+  if (!text) {
+    return null;
+  }
 
-  const container: CSSProperties = {
-    backgroundColor: BRAND_COLORS.darker,
-    color: theme?.textColor ?? BRAND_COLORS.light,
-    fontFamily: theme?.fontFamily ?? BRAND_FONT_FAMILY,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-    pointerEvents: 'none',
-  };
+  const eased = ease(clamp01(appear));
+  const exitEased = clamp01(exit);
+  const totalChars = text.length;
+  const visibleChars = Math.max(0, Math.round(totalChars * eased));
+  const content = text.slice(0, visibleChars);
+  const caretOpacity = 0.35 + 0.65 * Math.abs(Math.sin(eased * Math.PI * 2.8));
 
-  const panel: CSSProperties = {
-    borderRadius: 28,
-    border: `2px solid ${theme?.accentColor ?? BRAND_COLORS.accent}`,
-    padding: '48px 72px',
-    background: 'rgba(8, 10, 18, 0.82)',
-    minWidth: '60%',
-    maxWidth: '80%',
-    boxShadow: '0 26px 80px rgba(0,0,0,0.5)',
-    fontSize: 58,
-    lineHeight: 1.35,
-    letterSpacing: 0.6,
-    opacity,
+  const cardStyle: CSSProperties = {
+    padding: '40px 68px',
+    borderRadius: 32,
+    border: `2px solid ${theme?.accentColor ?? BRAND.red}`,
+    background: 'rgba(10, 12, 18, 0.78)',
+    fontSize: 60,
+    lineHeight: 1.3,
+    letterSpacing: 0.4,
+    boxShadow: '0 26px 80px rgba(0,0,0,0.45)',
+    opacity: exitEased,
+    transform: `translateY(${(1 - eased) * 24}px)` as string,
   };
 
   const caret: CSSProperties = {
     display: 'inline-block',
-    marginLeft: '0.4ch',
     width: '0.6ch',
-    background: theme?.accentColor ?? BRAND_COLORS.accent,
-    opacity: caretAlpha,
     height: '1.05em',
-    verticalAlign: 'middle',
+    marginLeft: '0.3ch',
+    background: theme?.accentColor ?? BRAND.red,
+    opacity: caretOpacity,
+    verticalAlign: 'baseline',
+  };
+
+  return applyPositioning(
+    highlight,
+    theme,
+    <div style={cardStyle}>
+      <span>{content}</span>
+      <span style={caret} />
+    </div>
+  );
+};
+
+const renderNoteBox: HighlightRenderer = ({highlight, appear, exit, theme}) => {
+  const text = highlight.text ?? '';
+  if (!text) {
+    return null;
+  }
+
+  const eased = ease(clamp01(appear));
+  const exitEased = clamp01(exit);
+
+  const direction = highlight.side ?? 'bottom';
+  const distance = direction === 'bottom' ? 120 : 120;
+  const translateValue = (1 - eased) * distance;
+  const translate =
+    direction === 'bottom'
+      ? `translateY(${translateValue}px)`
+      : `translateX(${direction === 'left' ? -translateValue : translateValue}px)`;
+
+  const cardStyle: CSSProperties = {
+    minWidth: '48%',
+    maxWidth: '68%',
+    padding: '36px 48px',
+    borderRadius: highlight.radius ?? 24,
+    background: highlight.bg ?? 'rgba(18, 22, 30, 0.92)',
+    border: `2px solid ${theme?.accentColor ?? BRAND.red}`,
+    boxShadow: '0 22px 70px rgba(0,0,0,0.45)',
+    fontSize: 54,
+    lineHeight: 1.35,
+    letterSpacing: 0.4,
+    transform: translate,
+    opacity: exitEased,
+  };
+
+  const typedChars = Math.max(0, Math.round(text.length * clamp01(appear)));
+  const content = text.slice(0, typedChars);
+
+  return applyPositioning(
+    highlight,
+    theme,
+    <div
+      style={{
+        ...cardStyle,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: cardStyle.borderRadius,
+          background:
+            highlight.bg ??
+            'linear-gradient(135deg, rgba(30,34,44,0.95) 0%, rgba(12,12,16,0.95) 100%)',
+          opacity: 0.92,
+        }}
+      />
+      <div style={{position: 'relative'}}>
+        <div
+          style={{
+            position: 'absolute',
+            height: 6,
+            width: '12%',
+            top: -14,
+            left: 0,
+            background: theme?.accentColor ?? BRAND.red,
+            borderRadius: 6,
+            opacity: 0.9,
+          }}
+        />
+        <span>{content}</span>
+        <span
+          style={{
+            display: 'inline-block',
+            width: '0.4ch',
+            height: '1em',
+            marginLeft: '0.3ch',
+            background: theme?.accentColor ?? BRAND.red,
+            opacity: 0.45 + 0.45 * Math.abs(Math.sin(appear * Math.PI * 3.1)),
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const buildGridBackground = (base: string) =>
+  `linear-gradient(90deg, transparent 0%, transparent 92%, rgba(255,255,255,0.03) 100%),
+   linear-gradient(0deg, transparent 0%, transparent 92%, rgba(255,255,255,0.03) 100%),
+   ${base}`;
+
+const renderSectionTitle: HighlightRenderer = ({highlight, appear, exit, theme}) => {
+  const title = highlight.title ?? highlight.text ?? '';
+  if (!title) {
+    return null;
+  }
+
+  const backgroundVariant = (highlight.variant ?? '').toLowerCase();
+  const baseColor = backgroundVariant === 'black' ? BRAND.black : BRAND.red;
+
+  const eased = ease(clamp01(appear));
+  const exitEased = clamp01(exit);
+  const scale = 1 + (1 - exitEased) * 0.015 + (1 - eased) * 0.015;
+
+  const container: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: theme?.textColor ?? BRAND.white,
+    background: buildGridBackground(
+      `radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08), transparent 60%), ${baseColor}`
+    ),
+    transform: `scale(${scale})`,
+    opacity: exitEased,
+    textAlign: 'center',
+    boxShadow: '0 0 120px rgba(0,0,0,0.45)',
+    padding: '0 12%',
+    pointerEvents: 'none',
   };
 
   return (
     <AbsoluteFill style={container}>
-      <div style={{height: 10, width: '14%', background: theme?.accentColor ?? BRAND_COLORS.accent, marginBottom: 40}} />
-      <div style={panel}>
-        <span>{displayText}</span>
-        <span style={caret} />
-      </div>
+      {highlight.badge ? (
+        <div
+          style={{
+            fontSize: 32,
+            letterSpacing: 6,
+            textTransform: 'uppercase',
+            marginBottom: 28,
+            opacity: 0.76,
+          }}
+        >
+          {highlight.badge}
+        </div>
+      ) : null}
+      <div style={{fontSize: 96, fontWeight: 700, lineHeight: 1.1, letterSpacing: 1.4}}>{title}</div>
+      {highlight.subtitle ? (
+        <div
+          style={{
+            marginTop: 28,
+            fontSize: 42,
+            opacity: 0.8,
+            maxWidth: '80%',
+            lineHeight: 1.4,
+          }}
+        >
+          {highlight.subtitle}
+        </div>
+      ) : null}
     </AbsoluteFill>
   );
 };
 
-const VARIANT_RENDERERS: Record<HighlightVariant, HighlightRenderer> = {
-  callout: renderCallout,
-  blurred: renderBlurred,
-  cutaway: renderCutaway,
-  brand: renderBrand,
+const RENDERERS: Record<HighlightType, HighlightRenderer> = {
   typewriter: renderTypewriter,
+  noteBox: renderNoteBox,
+  sectionTitle: renderSectionTitle,
+  icon: () => null,
 };
 
-export interface RenderHighlightOptions {
-  variant?: HighlightVariant;
-  highlight: HighlightPlan;
-  theme?: HighlightTheme;
-  appear: number;
-  exit: number;
-  animation?: HighlightAnimation;
-  width: number;
-  height: number;
-}
-
-export const renderHighlightVariant = (options: RenderHighlightOptions): ReactNode => {
-  const {variant, animation, ...rest} = options;
-  const resolvedVariant = variant ?? 'callout';
-  const renderer = VARIANT_RENDERERS[resolvedVariant] ?? renderCallout;
-  const context: HighlightVariantContext = {
-    ...rest,
-    animation: animation ?? 'fade',
-  };
+export const renderHighlightByType = (context: HighlightRenderContext): ReactNode => {
+  const highlightType = (context.highlight.type as HighlightType | undefined) ?? 'noteBox';
+  const renderer = RENDERERS[highlightType] ?? renderNoteBox;
   return renderer(context);
 };
-
-export const getPositioningStyle = (position: HighlightPosition | undefined): CSSProperties =>
-  POSITION_STYLES[position ?? 'center'];
-
-export const resolveAnimationTransform = (
-  animation: HighlightAnimation,
-  appear: number,
-  exit: number,
-  theme: HighlightTheme | undefined
-): CSSProperties => computeAnimationTransform(animation, appear, exit, theme);

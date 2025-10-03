@@ -1,5 +1,6 @@
 import json
 import math
+import os
 import re
 import sys
 import unicodedata
@@ -7,11 +8,14 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
+from dotenv import load_dotenv
+
 WORD_RE = re.compile(r"[\w']+", re.UNICODE)
 
 HIGHLIGHT_ANIMATIONS = ["zoom", "fade", "slide", "typewriter"]
 HIGHLIGHT_VARIANTS = ["blurred", "callout", "brand", "cutaway", "typewriter"]
 HIGHLIGHT_POSITIONS = ["center", "bottom", "top"]
+HIGHLIGHT_TYPES = ["noteBox", "typewriter", "sectionTitle"]
 
 
 def cycle_choice(options: List[str], index: int) -> str:
@@ -29,29 +33,6 @@ def collapse_text(text: str, max_length: int = 90) -> str:
     if last_space > 40:
         truncated = truncated[:last_space]
     return f"{truncated}…"
-
-
-def infer_transition_plan(asset: Optional[str], duration: float) -> Dict:
-    transition_type = "crossfade"
-    direction: Optional[str] = None
-    asset_lower = (asset or "").lower()
-
-    if "slide" in asset_lower:
-        transition_type = "slide"
-        for candidate in ("left", "right", "up", "down"):
-            if candidate in asset_lower:
-                direction = candidate
-                break
-    elif "cut" in asset_lower:
-        transition_type = "cut"
-
-    transition: Dict[str, object] = {
-        "type": transition_type,
-        "duration": round_ts(duration),
-    }
-    if direction:
-        transition["direction"] = direction
-    return transition
 
 
 def ensure_list(value: Optional[Iterable]) -> List[str]:
@@ -447,6 +428,85 @@ def round_ts(value: float) -> float:
     return round(float(value), 3)
 
 
+def load_env_overrides() -> Dict[str, float]:
+    root_dir = Path(__file__).resolve().parents[1]
+    load_dotenv(root_dir / ".env")
+    load_dotenv()
+
+    min_pause_candidates = [
+        os.getenv("TRANSITIONS_MIN_PAUSE_MS"),
+        os.getenv("TRANSITION_MIN_PAUSE_MS"),
+        os.getenv("MIN_PAUSE_MS"),
+    ]
+
+    min_pause_ms = next((value for value in min_pause_candidates if value), None)
+
+    try:
+        min_pause_ms_value = float(min_pause_ms) if min_pause_ms is not None else 700.0
+    except (TypeError, ValueError):
+        min_pause_ms_value = 700.0
+
+    min_pause_seconds = max(0.0, min_pause_ms_value / 1000.0)
+
+    default_transition = os.getenv("DEFAULT_TRANSITION_TYPE")
+
+    return {
+        "min_pause_seconds": min_pause_seconds,
+        "default_transition_type": (default_transition or "fadeCamera").strip() or "fadeCamera",
+    }
+
+
+def guess_transition_type(
+    rule: Dict, *, default_type: str, asset: Optional[str] = None
+) -> Dict[str, object]:
+    asset_lower = (asset or "").lower()
+    requested_type = (rule.get("type") or default_type or "").strip()
+    if requested_type:
+        transition_type = requested_type
+    else:
+        transition_type = "fadeCamera"
+
+    if transition_type == "fadeCamera" and "slide" in asset_lower:
+        transition_type = "slideWhoosh"
+
+    direction = rule.get("direction")
+    if not direction:
+        for candidate in ("left", "right", "up", "down"):
+            if candidate in asset_lower:
+                direction = candidate
+                break
+
+    plan: Dict[str, object] = {
+        "type": transition_type,
+    }
+
+    if direction and transition_type == "slideWhoosh":
+        plan["direction"] = direction
+
+    sfx = rule.get("sfx")
+    if not sfx:
+        if transition_type == "slideWhoosh":
+            sfx = "ui/whoosh.mp3"
+        elif transition_type == "fadeCamera":
+            sfx = "ui/camera.mp3"
+
+    if sfx:
+        plan["sfx"] = sfx
+
+    return plan
+
+
+def build_transition_plan(rule: Dict, default_duration: float, default_type: str) -> Dict:
+    asset = rule.get("asset")
+    transition_plan = guess_transition_type(rule, default_type=default_type, asset=asset)
+    duration_value = rule.get("duration", default_duration)
+    try:
+        transition_plan["duration"] = round_ts(float(duration_value))
+    except (TypeError, ValueError):
+        transition_plan["duration"] = round_ts(default_duration)
+    return transition_plan
+
+
 def main(argv):
     if len(argv) < 4:
         print("Usage: python make_plan_from_srt.py <srt_file> <mapping.json> <output_plan.json>")
@@ -460,6 +520,8 @@ def main(argv):
     filler_cfg = mapping["filler"]
     segment_cfg = mapping["segmenting"]
     transitions_cfg = mapping["transitions"]
+    env_overrides = load_env_overrides()
+    transitions_cfg.setdefault("min_pause_seconds", env_overrides.get("min_pause_seconds", 0.7))
     sfx_rules = mapping["actions"].get("sfx", [])
 
     if not srt_path.exists():
@@ -507,10 +569,16 @@ def main(argv):
         timeline_cursor += segment_duration
 
     transition_default = transitions_cfg.get("default", {})
+    transition_default.setdefault("type", env_overrides.get("default_transition_type", "fadeCamera"))
+    transition_default.setdefault("sfx", None)
     transition_rules = transitions_cfg.get("rules", [])
 
     highlights: List[Dict] = []
     last_sfx_time = defaultdict(lambda: -math.inf)
+    try:
+        min_pause_seconds = float(transitions_cfg.get("min_pause_seconds", 0.7) or 0.0)
+    except (TypeError, ValueError):
+        min_pause_seconds = 0.7
 
     for index, segment in enumerate(segments):
         segment_start_timeline = segment["timeline_start"]
@@ -518,37 +586,67 @@ def main(argv):
         segment["id"] = segment.get("id") or f"segment-{index + 1:02d}"
 
         if index > 0:
-            gap = segment["start"] - segments[index - 1]["end"]
-            prev_ctx = segments[index - 1].get("_context")
-            selected_rule = None
+            prev_segment = segments[index - 1]
+            gap = max(0.0, segment["start"] - prev_segment["end"])
+            prev_segment["gap_after"] = gap
+            prev_ctx = prev_segment.get("_context")
+            gap_threshold_value = transition_default.get("gap_threshold", 0.0)
+            try:
+                gap_threshold = float(gap_threshold_value or 0.0)
+            except (TypeError, ValueError):
+                gap_threshold = 0.0
 
-            for rule in transition_rules:
-                asset = rule.get("asset") or transition_default.get("asset")
-                if not asset:
-                    continue
-                if transition_rule_matches(rule, prev_ctx, segment_ctx, gap):
-                    selected_rule = {
-                        "asset": asset,
-                        "duration": rule.get("duration", transition_default.get("duration", 0.5)),
-                        "offset": rule.get("offset", 0.0),
-                    }
-                    break
+            min_gap_for_transition = max(min_pause_seconds, gap_threshold)
 
-            if selected_rule is None and transition_default.get("asset"):
-                if gap >= transition_default.get("gap_threshold", 0.0):
-                    selected_rule = {
-                        "asset": transition_default.get("asset"),
-                        "duration": transition_default.get("duration", 0.5),
-                        "offset": transition_default.get("offset", 0.0),
-                    }
+            silence_after = gap >= min_pause_seconds
+            prev_segment["silence_after"] = silence_after
 
-            if selected_rule:
-                transition_plan = infer_transition_plan(
-                    selected_rule.get("asset"), float(selected_rule.get("duration", 0.5))
-                )
-                prev_segment = segments[index - 1]
-                prev_segment["transition_out"] = transition_plan
-                segment["transition_in"] = transition_plan
+            if silence_after and gap >= min_gap_for_transition:
+                selected_rule = None
+
+                for rule in transition_rules:
+                    asset = rule.get("asset") or transition_default.get("asset")
+                    if not asset and not rule.get("type") and not transition_default.get("type"):
+                        continue
+                    if transition_rule_matches(rule, prev_ctx, segment_ctx, gap):
+                        selected_rule = {
+                            "asset": asset,
+                            "duration": rule.get("duration", transition_default.get("duration", 0.5)),
+                            "offset": rule.get("offset", 0.0),
+                            "type": rule.get("type") or transition_default.get("type"),
+                            "sfx": rule.get("sfx") or transition_default.get("sfx"),
+                            "direction": rule.get("direction"),
+                        }
+                        break
+
+                if selected_rule is None:
+                    default_asset = transition_default.get("asset")
+                    if default_asset or transition_default.get("type"):
+                        selected_rule = {
+                            "asset": default_asset,
+                            "duration": transition_default.get("duration", 0.5),
+                            "offset": transition_default.get("offset", 0.0),
+                            "type": transition_default.get("type"),
+                            "sfx": transition_default.get("sfx"),
+                            "direction": transition_default.get("direction"),
+                        }
+
+                if selected_rule:
+                    transition_plan = build_transition_plan(
+                        selected_rule,
+                        float(selected_rule.get("duration", transition_default.get("duration", 0.5))),
+                        selected_rule.get("type") or transition_default.get("type") or "fadeCamera",
+                    )
+                    if selected_rule.get("sfx") and "sfx" not in transition_plan:
+                        transition_plan["sfx"] = selected_rule["sfx"]
+                    prev_segment["transition_out"] = transition_plan
+                    segment["transition_in"] = transition_plan
+                else:
+                    prev_segment.pop("transition_out", None)
+                    segment.pop("transition_in", None)
+            else:
+                prev_segment.pop("transition_out", None)
+                segment.pop("transition_in", None)
 
         for entry in segment["entries"]:
             if not entry["keep"]:
@@ -581,8 +679,10 @@ def main(argv):
                             normalized_asset = normalized_asset[4:]
                         sfx_name = normalized_asset or None
                     start_time = max(0.0, candidate_time)
+                    highlight_type = cycle_choice(HIGHLIGHT_TYPES, highlight_index)
                     highlight = {
                         "id": f"highlight-{highlight_index + 1:02d}",
+                        "type": highlight_type,
                         "text": highlight_text,
                         "start": round_ts(start_time),
                         "duration": highlight_duration,
@@ -608,6 +708,10 @@ def main(argv):
                     last_sfx_time[cooldown_key] = candidate_time
                     break
 
+    if segments:
+        segments[-1].setdefault("silence_after", False)
+        segments[-1].setdefault("gap_after", 0.0)
+
     exported_segments = []
     for index, segment in enumerate(segments):
         segment_plan = {
@@ -618,6 +722,8 @@ def main(argv):
             "transitionOut": segment.get("transition_out"),
         }
 
+        segment_plan["kind"] = segment.get("kind") or "normal"
+
         label_text = ""
         for entry in segment.get("entries", []):
             candidate = collapse_text(entry.get("raw_text") or "", max_length=60)
@@ -626,6 +732,12 @@ def main(argv):
                 break
         if label_text:
             segment_plan["label"] = label_text
+
+        if "silence_after" in segment:
+            segment_plan["silenceAfter"] = bool(segment["silence_after"])
+        if segment.get("gap_after") is not None:
+            segment_plan.setdefault("metadata", {})
+            segment_plan["metadata"]["gapAfterSeconds"] = round_ts(segment.get("gap_after", 0.0))
 
         exported_segments.append(segment_plan)
 
@@ -646,6 +758,7 @@ def main(argv):
             "segments_kept": len(exported_segments),
             "timeline_duration": round_ts(timeline_cursor),
             "highlights_total": len(highlights),
+            "min_pause_seconds": round_ts(min_pause_seconds),
         },
     }
 

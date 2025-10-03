@@ -6,6 +6,7 @@ export interface TimelineSegment {
   duration: number;
   transitionInFrames: number;
   transitionOutFrames: number;
+  audioCrossfade: boolean;
 }
 
 const toFrames = (seconds: number, fps: number) => Math.max(0, Math.round(seconds * fps));
@@ -35,29 +36,51 @@ export const buildTimeline = (
   segments.forEach((segment, index) => {
     const durationFrames = Math.max(1, toFrames(segment.duration, fps));
     const maxTransitionFrames = durationFrames / 2;
+    const allowIn = index > 0 ? segments[index - 1].silenceAfter !== false : false;
+    const allowOut = segment.silenceAfter !== false;
 
-    const transitionInFrames = resolveTransitionDuration(
-      segment.transitionIn,
-      fps,
-      fallbackTransitionSeconds,
-      maxTransitionFrames
-    );
+    const segmentForTimeline: SegmentPlan = {...segment};
 
-    const explicitOut = segment.transitionOut ?? segments[index + 1]?.transitionIn;
-    const transitionOutFrames = resolveTransitionDuration(
-      explicitOut,
-      fps,
-      fallbackTransitionSeconds,
-      maxTransitionFrames
-    );
+    if (!allowIn) {
+      segmentForTimeline.transitionIn = undefined;
+    }
+
+    let effectiveOut = allowOut ? segmentForTimeline.transitionOut : undefined;
+    if (allowOut && !effectiveOut) {
+      const next = segments[index + 1];
+      if (next?.transitionIn) {
+        effectiveOut = next.transitionIn;
+      }
+    }
+
+    segmentForTimeline.transitionOut = allowOut ? effectiveOut : undefined;
+
+    const transitionInFrames = allowIn
+      ? resolveTransitionDuration(
+          segmentForTimeline.transitionIn,
+          fps,
+          fallbackTransitionSeconds,
+          maxTransitionFrames
+        )
+      : 0;
+
+    const transitionOutFrames = allowOut
+      ? resolveTransitionDuration(
+          segmentForTimeline.transitionOut,
+          fps,
+          fallbackTransitionSeconds,
+          maxTransitionFrames
+        )
+      : 0;
 
     if (index === 0) {
       timeline.push({
-        segment,
+        segment: segmentForTimeline,
         from: 0,
         duration: durationFrames,
         transitionInFrames,
         transitionOutFrames,
+        audioCrossfade: false,
       });
       return;
     }
@@ -67,11 +90,12 @@ export const buildTimeline = (
     const from = previous.from + previous.duration - overlap;
 
     timeline.push({
-      segment,
+      segment: segmentForTimeline,
       from,
       duration: durationFrames,
       transitionInFrames,
       transitionOutFrames,
+      audioCrossfade: allowIn,
     });
   });
 

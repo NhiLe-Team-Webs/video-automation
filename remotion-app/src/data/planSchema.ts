@@ -1,10 +1,9 @@
 import {z} from 'zod';
 import type {
   CameraMovement,
-  HighlightAnimation,
   HighlightPlan,
   HighlightPosition,
-  HighlightVariant,
+  HighlightType,
   Plan,
   SegmentPlan,
   TransitionDirection,
@@ -14,12 +13,8 @@ import type {
 
 const transitionTypeSchema: z.ZodType<TransitionType> = z.enum([
   'cut',
-  'crossfade',
-  'slide',
-  'zoom',
-  'scale',
-  'rotate',
-  'blur',
+  'fadeCamera',
+  'slideWhoosh',
 ]);
 
 const transitionDirectionSchema: z.ZodType<TransitionDirection> = z.enum([
@@ -33,58 +28,68 @@ const transitionPlanSchema: z.ZodType<TransitionPlan> = z.object({
   type: transitionTypeSchema,
   duration: z.number().positive().optional(),
   direction: transitionDirectionSchema.optional(),
-  intensity: z.number().positive().optional(),
+  sfx: z.string().optional(),
 });
 
 const cameraMovementSchema: z.ZodType<CameraMovement> = z.enum(['static', 'zoomIn', 'zoomOut']);
 
-const segmentPlanSchema: z.ZodType<SegmentPlan> = z.object({
-  id: z.string(),
-  sourceStart: z.number().min(0),
-  duration: z.number().positive(),
-  transitionIn: transitionPlanSchema.optional(),
-  transitionOut: transitionPlanSchema.optional(),
-  label: z.string().optional(),
-  playbackRate: z.number().positive().optional(),
-  cameraMovement: cameraMovementSchema.optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
+const segmentKindSchema: z.ZodType<SegmentPlan['kind']> = z.enum(['normal', 'broll']).catch('normal');
 
-const highlightAnimationSchema: z.ZodType<HighlightAnimation> = z.enum([
-  'fade',
-  'zoom',
-  'slide',
-  'bounce',
-  'float',
-  'flip',
-  'typewriter',
-]);
+const segmentPlanSchema: z.ZodType<SegmentPlan> = z
+  .object({
+    id: z.string(),
+    kind: segmentKindSchema.optional(),
+    sourceStart: z.number().min(0).optional(),
+    duration: z.number().positive(),
+    transitionIn: transitionPlanSchema.optional(),
+    transitionOut: transitionPlanSchema.optional(),
+    label: z.string().optional(),
+    title: z.string().optional(),
+    playbackRate: z.number().positive().optional(),
+    cameraMovement: cameraMovementSchema.optional(),
+    silenceAfter: z.boolean().optional(),
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .transform((segment) => ({
+    ...segment,
+    kind: segment.kind ?? 'normal',
+  }));
 
-const highlightPositionSchema: z.ZodType<HighlightPosition> = z.enum([
-  'top',
-  'center',
-  'bottom',
-]);
+const highlightTypeSchema: z.ZodType<HighlightType> = z
+  .enum(['typewriter', 'noteBox', 'sectionTitle', 'icon'])
+  .catch('noteBox');
 
-const highlightVariantSchema: z.ZodType<HighlightVariant> = z.enum([
-  'callout',
-  'blurred',
-  'cutaway',
-  'brand',
-  'typewriter',
-]);
+const highlightPositionSchema: z.ZodType<HighlightPosition> = z
+  .enum(['top', 'center', 'bottom'])
+  .catch('center');
 
-const highlightPlanSchema: z.ZodType<HighlightPlan> = z.object({
-  id: z.string(),
-  text: z.string(),
-  start: z.number().min(0),
-  duration: z.number().positive(),
-  position: highlightPositionSchema.optional(),
-  animation: highlightAnimationSchema.optional(),
-  sfx: z.string().optional(),
-  volume: z.number().min(0).max(1).optional(),
-  variant: highlightVariantSchema.optional(),
-});
+const highlightPlanSchema: z.ZodType<HighlightPlan> = z
+  .object({
+    id: z.string(),
+    type: highlightTypeSchema.optional(),
+    text: z.string().optional(),
+    title: z.string().optional(),
+    subtitle: z.string().optional(),
+    badge: z.string().optional(),
+    name: z.string().optional(),
+    asset: z.string().optional(),
+    start: z.number().min(0),
+    duration: z.number().positive(),
+    position: highlightPositionSchema.optional(),
+    side: z.enum(['bottom', 'left', 'right', 'top']).optional(),
+    bg: z.string().optional(),
+    radius: z.number().optional(),
+    sfx: z.string().optional(),
+    gain: z.number().optional(),
+    ducking: z.boolean().optional(),
+    animation: z.string().optional(),
+    variant: z.string().optional(),
+    volume: z.number().min(0).max(1).optional(),
+  })
+  .transform((highlight) => ({
+    ...highlight,
+    type: highlight.type ?? 'noteBox',
+  }));
 
 const planSchema: z.ZodType<Plan> = z.object({
   segments: z.array(segmentPlanSchema),

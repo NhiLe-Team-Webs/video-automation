@@ -13,6 +13,22 @@ The scripts inside `python-be/` normalize your source footage, generate transcri
    pip install -r requirements.txt
    ```
 
+   Create a `.env` file next to this README if you want to override transition timing. The generator reads the following optional keys (falling back to defaults shown below):
+
+   ```dotenv
+   # Minimum silence (in milliseconds) that must follow a segment before a transition is inserted
+   TRANSITIONS_MIN_PAUSE_MS=700
+
+   # Fallback if the key above is missing
+   TRANSITION_MIN_PAUSE_MS=700
+
+   # Generic override consumed by other tools in the stack
+   MIN_PAUSE_MS=700
+
+   # Default transition type when no rule matches (fadeCamera | slideWhoosh | cut)
+   DEFAULT_TRANSITION_TYPE=fadeCamera
+   ```
+
 2. **Provide the inputs**
    - Source video: `python-be/inputs/input.mp4` (you can pass a different path when running the script).
    - Gemini planning (optional): create a `.env` file with `GEMINI_API_KEY=...` (and optionally `GEMINI_MODEL`).
@@ -36,7 +52,7 @@ The scripts inside `python-be/` normalize your source footage, generate transcri
 4. **Render with Remotion**
    ```bash
    cd ../remotion-app
-   npm install
+   npm install                      # installs the Remotion CLI (required for build/render)
    npm run render                   # produces out/final.mp4
    ```
 
@@ -48,38 +64,84 @@ The generated plan conforms to the Remotion schema (`remotion-app/src/data/planS
 {
   "segments": [
     {
-      "id": "segment-01",
+      "id": "seg-01",
+      "kind": "normal",
       "sourceStart": 0.0,
       "duration": 12.5,
       "label": "Introduction",
-      "transitionOut": {"type": "crossfade", "duration": 0.6}
+      "transitionOut": {
+        "type": "fadeCamera",
+        "duration": 0.8,
+        "sfx": "ui/camera.mp3"
+      },
+      "silenceAfter": true
     },
     {
-      "id": "segment-02",
-      "sourceStart": 14.1,
-      "duration": 18.2,
-      "transitionIn": {"type": "crossfade", "duration": 0.6},
-      "transitionOut": {"type": "slide", "duration": 0.5, "direction": "left"}
+      "id": "broll1",
+      "kind": "broll",
+      "title": "AI Robot (download later)",
+      "duration": 3.0,
+      "transitionIn": {
+        "type": "fadeCamera",
+        "duration": 0.8,
+        "sfx": "ui/camera.mp3"
+      },
+      "transitionOut": {
+        "type": "slideWhoosh",
+        "duration": 0.7,
+        "direction": "left",
+        "sfx": "ui/whoosh.mp3"
+      }
     }
   ],
   "highlights": [
     {
-      "id": "highlight-01",
-      "text": "Key insight: 200% growth",
-      "start": 5.8,
-      "duration": 2.6,
-      "position": "center",
-      "animation": "zoom",
-      "variant": "blurred",
-      "sfx": "assets/sfx/emphasis/ding.mp3"
+      "id": "h1",
+      "type": "typewriter",
+      "text": "Get recommended by AI",
+      "start": 64.2,
+      "duration": 3.2,
+      "sfx": "ui/type.mp3"
+    },
+    {
+      "id": "h2",
+      "type": "noteBox",
+      "text": "Make your Google Business Profile shine",
+      "start": 86.1,
+      "duration": 4.8,
+      "side": "bottom"
+    },
+    {
+      "id": "sec2",
+      "type": "sectionTitle",
+      "title": "Strategy #2",
+      "start": 210.0,
+      "duration": 3.5,
+      "variant": "black"
+    },
+    {
+      "id": "icon1",
+      "type": "icon",
+      "name": "Rocket",
+      "start": 123.4,
+      "duration": 1.2,
+      "sfx": "ui/pop.mp3"
     }
-  ]
+  ],
+  "metadata": {
+    "min_pause_seconds": 0.7
+  }
 }
 ```
 
 - `sourceStart` and `duration` are measured in seconds relative to the trimmed video (`input.mp4`).
-- `transitionIn`/`transitionOut` support the following `type` values: `cut`, `crossfade`, `slide`, `zoom`, `scale`, `rotate`, and `blur`. Slides can include `direction` (`left|right|up|down`); zoom/scale/rotate/blur accept an `intensity` value (≈0.1–0.35).
-- Highlights rotate through animations (`fade/zoom/slide/bounce/float/flip`) and choose a position (`center/bottom/top`). If an SFX rule specifies `volume`, the value is preserved (0–1).
+- `kind` distinguishes regular camera segments from `broll` placeholders so the Remotion project can render the correct component.
+- `transitionIn`/`transitionOut` now focus on the union `cut | fadeCamera | slideWhoosh`. Silence-aware transitions are only emitted when the gap after a segment meets `min_pause_seconds`.
+- Highlights map directly to the Remotion variants:
+  - `typewriter`: type-on headline with a blinking caret.
+  - `noteBox`: branded slide-in note card with per-character typing SFX.
+  - `sectionTitle`: full-screen cutaway for chapter titles (supports optional `subtitle`/`badge`).
+  - `icon`: renders Lucide-driven iconography with a pop + float animation.
 
 ## 🤖 Gemini planner (optional)
 
@@ -107,7 +169,8 @@ The generated plan conforms to the Remotion schema (`remotion-app/src/data/planS
 
 - **Missing `stage1_cut.srt`**: confirm Whisper installed correctly (`pip install -r requirements.txt`) and your machine has the required CPU/GPU support.
 - **No highlights in the plan**: ensure the SFX rules in `mapping.json` match transcript keywords or add guidance when invoking Gemini.
-- **Remotion render fails due to missing SFX**: verify each SFX path in `plan.json` (for example `assets/sfx/ui/pop.mp3`) exists in the shared `assets/sfx/` directory.
+- **Remotion render fails due to missing SFX**: verify each SFX path in `plan.json` (for example `ui/pop.mp3`) exists in the shared `assets/sfx/` directory.
+- **Transitions feel abrupt**: raise `TRANSITIONS_MIN_PAUSE_MS` in `.env` to require longer silences before adding effects, or set `DEFAULT_TRANSITION_TYPE=cut` to disable fades/slides.
 - **Need to debug the plan**: inspect `outputs/plan.json` before Remotion consumes it.
 
 These scripts align perfectly with the Remotion pipeline—run `run_all`, then render inside `remotion-app` to produce `final.mp4` with synchronized segments, transitions, highlights, and SFX.
