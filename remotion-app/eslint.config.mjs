@@ -1,3 +1,13 @@
-import { config } from "@remotion/eslint-config-flat";
+import js from "@eslint/js";
 
-export default config;
+export default [
+  {
+    languageOptions: {
+      globals: {
+        ...js.configs.recommended.languageOptions.globals,
+        console: "readonly",
+        process: "readonly",
+      },
+    },
+  },
+];
