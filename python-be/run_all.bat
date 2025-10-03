@@ -8,7 +8,8 @@ set "SOURCE_VIDEO=%~1"
 if "%SOURCE_VIDEO%"=="" set "SOURCE_VIDEO=inputs\input.mp4"
 
 set "OUTPUT_DIR=%SCRIPT_DIR%outputs"
-set "REMOTION_PUBLIC=%SCRIPT_DIR%..\remotion-app\public"
+set "PUBLIC_ROOT=%SCRIPT_DIR%..\public"
+set "PUBLIC_INPUT=%PUBLIC_ROOT%\input"
 set "AUTO_EDITOR_OUTPUT=%OUTPUT_DIR%\stage1_cut.mp4"
 set "WHISPER_SRT=%OUTPUT_DIR%\stage1_cut.srt"
 set "PLAN_TMP=%OUTPUT_DIR%\plan.json"
@@ -20,7 +21,7 @@ if not exist "%SOURCE_VIDEO%" (
 )
 
 if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
-if not exist "%REMOTION_PUBLIC%" mkdir "%REMOTION_PUBLIC%"
+if not exist "%PUBLIC_INPUT%" mkdir "%PUBLIC_INPUT%"
 
 echo [STEP] Auto-Editor: loai bo khoang lang => %AUTO_EDITOR_OUTPUT%
 python -m auto_editor "%SOURCE_VIDEO%" -o "%AUTO_EDITOR_OUTPUT%" ^
@@ -51,11 +52,11 @@ if errorlevel 1 (
   echo [INFO] Gemini plan generated successfully.
 )
 
-copy /Y "%AUTO_EDITOR_OUTPUT%" "%REMOTION_PUBLIC%\input.mp4" >nul
-copy /Y "%PLAN_TMP%" "%REMOTION_PUBLIC%\plan.json" >nul
+copy /Y "%AUTO_EDITOR_OUTPUT%" "%PUBLIC_INPUT%\input.mp4" >nul
+copy /Y "%PLAN_TMP%" "%PUBLIC_INPUT%\plan.json" >nul
 
-echo [DONE] Da copy du lieu sang remotion-app\public\
-echo        - Video: remotion-app\public\input.mp4
-echo        - Plan:  remotion-app\public\plan.json
+echo [DONE] Da copy du lieu sang public\input\
+echo        - Video: public\input\input.mp4
+echo        - Plan:  public\input\plan.json
 echo [NEXT] Chay: cd ..\remotion-app ^&^& npm install ^&^& npm run render
 pause

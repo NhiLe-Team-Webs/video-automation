@@ -1,6 +1,6 @@
 # 🎬 Python Backend Toolkit
 
-The scripts inside `python-be/` normalize your source footage, generate transcripts, and create a Remotion-ready `plan.json`. The resulting assets are copied into `remotion-app/public/` so the Remotion project can render automatically.
+The scripts inside `python-be/` normalize your source footage, generate transcripts, and create a Remotion-ready `plan.json`. The resulting assets are copied into the shared `public/input/` workspace so the Remotion project can render automatically.
 
 ## 🚀 Quick start workflow
 
@@ -31,7 +31,7 @@ The scripts inside `python-be/` normalize your source footage, generate transcri
    - Auto-Editor removes silence → `outputs/stage1_cut.mp4`.
    - Whisper generates an SRT transcript → `outputs/stage1_cut.srt`.
    - A planning step produces `plan.json` (Gemini first, static mapping fallback).
-   - Copies `stage1_cut.mp4` and `plan.json` into `remotion-app/public/` as `input.mp4` and `plan.json`.
+   - Copies `stage1_cut.mp4` and `plan.json` into `public/input/` as `input.mp4` and `plan.json`.
 
 4. **Render with Remotion**
    ```bash
@@ -100,8 +100,8 @@ The generated plan conforms to the Remotion schema (`remotion-app/src/data/planS
 | `outputs/stage1_cut.mp4` | Silence-trimmed video (copied to Remotion). |
 | `outputs/stage1_cut.srt` | Whisper transcript. |
 | `outputs/plan.json` | Final plan before copying to Remotion. |
-| `remotion-app/public/input.mp4` | Video consumed by Remotion. |
-| `remotion-app/public/plan.json` | Plan consumed by Remotion during rendering. |
+| `public/input/input.mp4` | Video consumed by Remotion. |
+| `public/input/plan.json` | Plan consumed by Remotion during rendering. |
 
 ## 🔧 Troubleshooting
 
