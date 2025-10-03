@@ -9,7 +9,8 @@ from typing import Dict, Iterable, List, Optional
 
 WORD_RE = re.compile(r"[\w']+", re.UNICODE)
 
-HIGHLIGHT_ANIMATIONS = ["zoom", "fade", "slide"]
+HIGHLIGHT_ANIMATIONS = ["zoom", "fade", "slide", "typewriter"]
+HIGHLIGHT_VARIANTS = ["blurred", "callout", "brand", "cutaway", "typewriter"]
 HIGHLIGHT_POSITIONS = ["center", "bottom", "top"]
 
 
@@ -574,6 +575,8 @@ def main(argv):
                     sfx_name = None
                     if sfx_asset:
                         normalized_asset = sfx_asset.replace("\\", "/")
+                        if normalized_asset.startswith("assets/"):
+                            normalized_asset = normalized_asset[7:]
                         if normalized_asset.startswith("sfx/"):
                             normalized_asset = normalized_asset[4:]
                         sfx_name = normalized_asset or None
@@ -585,8 +588,14 @@ def main(argv):
                         "duration": highlight_duration,
                         "position": cycle_choice(HIGHLIGHT_POSITIONS, highlight_index),
                         "animation": cycle_choice(HIGHLIGHT_ANIMATIONS, highlight_index),
+                        "variant": cycle_choice(HIGHLIGHT_VARIANTS, highlight_index),
                     }
                     if sfx_name:
+                        if not sfx_name.lower().startswith("assets/"):
+                            if sfx_name.lower().startswith("sfx/"):
+                                sfx_name = f"assets/{sfx_name}"
+                            else:
+                                sfx_name = f"assets/sfx/{sfx_name}"
                         highlight["sfx"] = sfx_name
                     if rule.get("volume") is not None:
                         try:

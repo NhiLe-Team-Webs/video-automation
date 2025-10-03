@@ -6,7 +6,8 @@ cd "$SCRIPT_DIR"
 
 SOURCE_VIDEO="${1:-inputs/input.mp4}"
 OUTPUT_DIR="$SCRIPT_DIR/outputs"
-REMOTION_PUBLIC="$SCRIPT_DIR/../remotion-app/public"
+PUBLIC_ROOT="$SCRIPT_DIR/../public"
+PUBLIC_INPUT="$PUBLIC_ROOT/input"
 AUTO_EDITOR_OUTPUT="$OUTPUT_DIR/stage1_cut.mp4"
 WHISPER_SRT="$OUTPUT_DIR/stage1_cut.srt"
 PLAN_TMP="$OUTPUT_DIR/plan.json"
@@ -17,7 +18,7 @@ if [ ! -f "$SOURCE_VIDEO" ]; then
   exit 1
 fi
 
-mkdir -p "$OUTPUT_DIR" "$REMOTION_PUBLIC"
+mkdir -p "$OUTPUT_DIR" "$PUBLIC_INPUT"
 
 echo "[STEP] Auto-Editor: loại bỏ khoảng lặng => $AUTO_EDITOR_OUTPUT"
 python -m auto_editor "$SOURCE_VIDEO" -o "$AUTO_EDITOR_OUTPUT" \
@@ -47,10 +48,10 @@ else
   python scripts/make_plan_from_srt.py "$WHISPER_SRT" "$PLAN_MAPPING" "$PLAN_TMP"
 fi
 
-cp "$AUTO_EDITOR_OUTPUT" "$REMOTION_PUBLIC/input.mp4"
-cp "$PLAN_TMP" "$REMOTION_PUBLIC/plan.json"
+cp "$AUTO_EDITOR_OUTPUT" "$PUBLIC_INPUT/input.mp4"
+cp "$PLAN_TMP" "$PUBLIC_INPUT/plan.json"
 
-echo "[DONE] Đã copy dữ liệu sang remotion-app/public/"
-echo "       - Video: remotion-app/public/input.mp4"
-echo "       - Plan:  remotion-app/public/plan.json"
+echo "[DONE] Đã copy dữ liệu sang public/input/"
+echo "       - Video: public/input/input.mp4"
+echo "       - Plan:  public/input/plan.json"
 echo "[NEXT] Chạy: cd ../remotion-app && npm install && npm run render"

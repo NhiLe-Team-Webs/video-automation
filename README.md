@@ -8,10 +8,10 @@ This project stitches together Remotion, MoviePy, Auto-Editor, Whisper, and a ge
 ## High-level architecture
 
 1. The Python/AI pipeline analyzes `input.mp4` and generates `plan.json`, which includes segment boundaries, highlight metadata, and animation details.
-2. Remotion reads `input.mp4`, `plan.json`, and the `sfx/` directory to assemble the timeline:
+2. Remotion reads `input.mp4`, `plan.json`, and the shared `/assets` directory to assemble the timeline:
    - Split the video into segments.
-   - Apply transitions (crossfade/slide, etc.).
-   - Render animated text highlights (fade/zoom/slide) in sync with the script.
+   - Apply eased transitions (crossfade/slide/zoom).
+   - Render animated text highlights (blurred backdrops, brand cutaways, typewriter, etc.).
    - Layer sound effects that correspond to each highlight.
 3. Render the final cut (`final.mp4`) with `npx remotion render`.
 
@@ -22,10 +22,11 @@ This project stitches together Remotion, MoviePy, Auto-Editor, Whisper, and a ge
    cd python-be
    ./run_all.sh                     # or run_all.sh on Windows
    ```
-   The script generates `outputs/plan.json`, copies it to `remotion-app/public/plan.json`, and copies the trimmed video to `remotion-app/public/input.mp4`.
+   The script generates `outputs/plan.json`, copies it to `public/input/plan.json`, and copies the trimmed video to `public/input/input.mp4` so Remotion can pick them up automatically.
+   Shared media (SFX, b-roll, fonts) live in the repository-level `assets/` directory so both pipelines stay in sync.
 
 2. **Manual data prep**
-   If you prefer to supply assets manually, place your video and plan file inside `remotion-app/public/`. The folder includes `plan.sample.json` as a reference:
+   If you prefer to supply assets manually, place your video and plan file inside the shared `public/input/` folder. It includes `plan.sample.json` as a reference:
 
 ```json
 {
@@ -33,30 +34,50 @@ This project stitches together Remotion, MoviePy, Auto-Editor, Whisper, and a ge
     {
       "id": "intro",
       "sourceStart": 0,
-      "duration": 20,
-      "transitionOut": {"type": "crossfade", "duration": 1}
+      "duration": 18,
+      "transitionOut": {"type": "crossfade", "duration": 1},
+      "cameraMovement": "zoomIn"
+    },
+    {
+      "id": "demo",
+      "sourceStart": 28,
+      "duration": 32,
+      "transitionIn": {"type": "crossfade", "duration": 1},
+      "transitionOut": {"type": "slide", "duration": 0.75, "direction": "left"},
+      "cameraMovement": "zoomOut"
     }
   ],
   "highlights": [
     {
       "id": "hook",
-      "text": "Key message appears!",
-      "start": 5,
+      "text": "Tăng gấp đôi hiệu suất với workflow tự động hoá.",
+      "start": 4.5,
       "duration": 4,
       "position": "center",
-      "animation": "zoom",
+      "animation": "fade",
+      "variant": "blurred",
       "sfx": "ui/pop.mp3"
+    },
+    {
+      "id": "cta",
+      "text": "Đăng ký demo ngay hôm nay",
+      "start": 68,
+      "duration": 5,
+      "position": "center",
+      "animation": "typewriter",
+      "variant": "typewriter",
+      "sfx": "tech/notification.mp3"
     }
   ]
 }
 ```
 
-3. Place your sound-effect files in `remotion-app/public/sfx/` (for example, `ui/pop.mp3`). The Python pipeline preserves relative SFX paths when it generates highlights.
+3. Place your sound-effect files (and other shared media) in the repository-level `assets/` directory. The Remotion sync script links `assets/` into the shared `public/assets/` workspace, and both pipelines resolve SFX using paths such as `assets/sfx/ui/pop.mp3`.
 
-> **Note:** Remotion automatically looks for `plan.json` in the `public/` folder. If you want to render from a different location, pass custom props when running the Remotion CLI:
+> **Note:** Remotion automatically loads `input/plan.json` and `input/input.mp4` from the shared `public/` folder. If you want to render from a different location, pass custom props when running the Remotion CLI:
 >
 > ```bash
-> npx remotion render src/Root.tsx FinalVideo out/final.mp4 --props '{"planPath":"custom-plan.json","inputVideo":"input.mp4"}'
+> npx remotion render src/Root.tsx FinalVideo out/final.mp4 --props '{"planPath":"custom-plan.json","inputVideo":"custom-input.mp4"}'
 > ```
 
 If the final video is longer than 15 minutes, update `DEFAULT_DURATION_IN_FRAMES` in `remotion-app/src/config.ts` to match the new duration.
@@ -73,13 +94,16 @@ npm run render     # Produce out/final.mp4
 
 The exported video is saved to `remotion-app/out/final.mp4`.
 
+> **Tip:** The Remotion `pre*` scripts automatically sync the repository-level `assets/` folder into `public/assets/` and link `remotion-app/public` to the shared workspace before previewing or rendering.
+
 ## Remotion structure
 
 - `src/types.ts`: Shared types for segments, highlights, and transitions.
 - `src/data/planSchema.ts`: Zod schema definition and example plan data.
 - `src/hooks/usePlan.ts`: Hook that loads and validates `plan.json`.
 - `src/components/VideoTimeline.tsx`: Splits video into segments and handles transitions.
-- `src/components/HighlightCallout.tsx` + `HighlightsLayer.tsx`: Animated text overlays.
+- `src/components/Transitions.tsx`: Shared easing logic for visual/audio transitions.
+- `src/components/HighlightCallout.tsx` + `TextHighlightVariants.tsx`: Animated text overlays.
 - `src/components/SfxLayer.tsx`: Synchronizes SFX with highlight timing.
 - `src/components/FinalComposition.tsx`: Combines all timeline layers.
 - `src/Root.tsx`: Registers the Remotion composition.
