@@ -4,8 +4,11 @@ setlocal ENABLEEXTENSIONS
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 
+set "INPUT_DIR=%SCRIPT_DIR%inputs"
+if not exist "%INPUT_DIR%" mkdir "%INPUT_DIR%"
+
 set "SOURCE_VIDEO=%~1"
-if "%SOURCE_VIDEO%"=="" set "SOURCE_VIDEO=inputs\input.mp4"
+if "%SOURCE_VIDEO%"=="" set "SOURCE_VIDEO=%INPUT_DIR%\input.mp4"
 
 set "OUTPUT_DIR=%SCRIPT_DIR%outputs"
 set "PUBLIC_ROOT=%SCRIPT_DIR%..\public"
@@ -17,6 +20,8 @@ set "PLAN_MAPPING=%SCRIPT_DIR%plan\mapping.json"
 
 if not exist "%SOURCE_VIDEO%" (
   echo [ERROR] Khong tim thay video dau vao: %SOURCE_VIDEO%
+  echo         - Dat video nguon tai: %INPUT_DIR%\input.mp4
+  echo         - Hoac chay: run_all.bat duongdan\den\video.mp4
   exit /b 1
 )
 

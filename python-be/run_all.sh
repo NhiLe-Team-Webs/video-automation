@@ -4,7 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-SOURCE_VIDEO="${1:-inputs/input.mp4}"
+INPUT_DIR="$SCRIPT_DIR/inputs"
+DEFAULT_SOURCE_VIDEO="$INPUT_DIR/input.mp4"
+SOURCE_VIDEO="${1:-$DEFAULT_SOURCE_VIDEO}"
 OUTPUT_DIR="$SCRIPT_DIR/outputs"
 PUBLIC_ROOT="$SCRIPT_DIR/../public"
 PUBLIC_INPUT="$PUBLIC_ROOT/input"
@@ -13,8 +15,12 @@ WHISPER_SRT="$OUTPUT_DIR/stage1_cut.srt"
 PLAN_TMP="$OUTPUT_DIR/plan.json"
 PLAN_MAPPING="$SCRIPT_DIR/plan/mapping.json"
 
+mkdir -p "$INPUT_DIR"
+
 if [ ! -f "$SOURCE_VIDEO" ]; then
   echo "[ERROR] Không tìm thấy video đầu vào: $SOURCE_VIDEO" >&2
+  echo "        - Đặt video nguồn tại: $INPUT_DIR/input.mp4" >&2
+  echo "        - Hoặc chạy: ./run_all.sh đường/dẫn/tới/video.mp4" >&2
   exit 1
 fi
 
