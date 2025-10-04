@@ -4,8 +4,9 @@ setlocal ENABLEEXTENSIONS
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 
+:: Default input chuyển sang public\input thay vì python-be\inputs
 set "SOURCE_VIDEO=%~1"
-if "%SOURCE_VIDEO%"=="" set "SOURCE_VIDEO=inputs\input.mp4"
+if "%SOURCE_VIDEO%"=="" set "SOURCE_VIDEO=%SCRIPT_DIR%..\public\input\input.mp4"
 
 set "OUTPUT_DIR=%SCRIPT_DIR%outputs"
 set "PUBLIC_ROOT=%SCRIPT_DIR%..\public"

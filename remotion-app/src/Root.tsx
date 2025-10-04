@@ -1,9 +1,8 @@
 import type {CalculateMetadataFunction} from 'remotion';
-import {Composition} from 'remotion';
+import {Composition, staticFile} from 'remotion';
 import {FinalComposition} from './components/FinalComposition';
 import {buildTimelineMetadata} from './components/VideoTimeline';
 import {
-  DEFAULT_DURATION_IN_FRAMES,
   VIDEO_FPS,
   VIDEO_HEIGHT,
   VIDEO_WIDTH,
@@ -25,37 +24,89 @@ const DEFAULT_COMPOSITION_PROPS: FinalCompositionProps = {
   config: {},
 };
 
+type PathModuleWithDefault = typeof import('path') & {
+  default?: typeof import('path');
+};
+
+const stripPublicPrefix = (value: string): string =>
+  value.replace(/^[/\\]+/, '').replace(/^public[/\\]+/i, '');
+
+const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value);
+
+const resolveBrowserPlanUrl = (planPath: string): string => {
+  if (isHttpUrl(planPath)) {
+    return planPath;
+  }
+
+  const normalized = stripPublicPrefix(planPath);
+  return staticFile(normalized);
+};
+
+const loadPlanFileContents = async (planPath: string): Promise<string> => {
+  if (typeof window === 'undefined') {
+    if (isHttpUrl(planPath)) {
+      const response = await fetch(planPath);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch plan from ${planPath}: ${response.status} ${response.statusText}`
+        );
+      }
+
+      return response.text();
+    }
+
+    const fsModule = (await import(
+      /* webpackIgnore: true */ 'fs/promises'
+    )) as typeof import('fs/promises');
+    const pathModuleRaw = (await import(
+      /* webpackIgnore: true */ 'path'
+    )) as PathModuleWithDefault;
+    const pathModule = pathModuleRaw.default ?? pathModuleRaw;
+    const sanitizedRelative = stripPublicPrefix(planPath);
+    const absolutePlanPath = pathModule.isAbsolute(planPath)
+      ? planPath
+      : pathModule.join(process.cwd(), 'public', sanitizedRelative);
+
+    return fsModule.readFile(absolutePlanPath, 'utf-8');
+  }
+
+  const response = await fetch(resolveBrowserPlanUrl(planPath), {
+    cache: 'no-cache',
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch plan from ${planPath}: ${response.status} ${response.statusText}`
+    );
+  }
+
+  return response.text();
+};
+
 const loadPlanFromDisk = async (planPath: string): Promise<Plan> => {
-  const [{readFile}, pathModule] = await Promise.all([
-    import('node:fs/promises'),
-    import('node:path'),
-  ]);
-
-  const absolutePlanPath = pathModule.isAbsolute(planPath)
-    ? planPath
-    : pathModule.join(process.cwd(), 'public', planPath);
-
-  const fileContents = await readFile(absolutePlanPath, 'utf-8');
+  const fileContents = await loadPlanFileContents(planPath);
   const parsed = JSON.parse(fileContents) as unknown;
   return parsePlan(parsed);
 };
 
 const loadActivePlan = async (
   props: FinalCompositionProps
-): Promise<Plan | null> => {
+): Promise<Plan> => {
   if (props.plan) {
     return props.plan;
   }
 
   if (!props.planPath) {
-    return null;
+    throw new Error(
+      'No planPath provided. Supply a plan object or set planPath to a valid JSON file.'
+    );
   }
 
   try {
     return await loadPlanFromDisk(props.planPath);
-  } catch (err) {
-    console.warn(`Failed to load plan from ${props.planPath}`, err);
-    return null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to load plan from ${props.planPath}: ${message}`);
   }
 };
 
@@ -77,12 +128,6 @@ const calculateMetadata: CalculateMetadataFunction<FinalCompositionProps> = asyn
     0.75;
 
   const plan = await loadActivePlan(mergedProps);
-
-  if (!plan) {
-    return {
-      durationInFrames: DEFAULT_DURATION_IN_FRAMES,
-    };
-  }
 
   const {totalDurationInFrames} = buildTimelineMetadata(
     plan.segments,
