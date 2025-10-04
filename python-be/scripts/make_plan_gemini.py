@@ -206,6 +206,7 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         "- Để tạo highlight icon, dùng `type: \"icon\"` với `name` (tiêu đề ngắn), `icon` (ví dụ: `launch`, `fa:robot`), tùy chọn `accentColor`, `backgroundColor`, `iconColor`, `animation` ("
         + highlight_animations
         + ") cùng `sfx`/`volume` nếu phù hợp.\n"
+        "- Luon chen it nhat mot highlight `type: \"icon\"` neu transcript co diem gioi thieu san pham, thanh tuu hoac closing cam xuc; chon icon phu hop va giu animation gon gang (float/pulse/pop).\n"
         "- SFX phải chọn từ thư viện assets/sfx với path tương đối (vd: assets/sfx/ui/pop.mp3 hoặc ui/pop.mp3). Danh sách: "
         + sfx_names
         + ". Gợi ý: "
@@ -411,6 +412,9 @@ def normalize_highlight_item(raw: Dict[str, Any], index: int) -> Dict[str, Any] 
     name = (raw.get("name") or raw.get("label") or "").strip()
     icon_value = (raw.get("icon") or raw.get("iconName") or "").strip()
 
+    has_icon_marker = bool(icon_value or (name and not highlight_type))
+    resolved_highlight_type = highlight_type or ("icon" if has_icon_marker else None)
+
     if not any([text, title, subtitle, badge, name, icon_value]):
         return None
 
@@ -431,7 +435,7 @@ def normalize_highlight_item(raw: Dict[str, Any], index: int) -> Dict[str, Any] 
         position = "center"
 
     animation_raw = raw.get("animation") or raw.get("style") or raw.get("motion")
-    animation_default = "pop" if highlight_type == "icon" else "fade"
+    animation_default = "pop" if resolved_highlight_type == "icon" else "fade"
     animation_key = ""
     if isinstance(animation_raw, str):
         animation_key = animation_raw.strip().lower().replace(" ", "").replace("-", "").replace("_", "")
@@ -470,8 +474,8 @@ def normalize_highlight_item(raw: Dict[str, Any], index: int) -> Dict[str, Any] 
         "animation": animation,
     }
 
-    if highlight_type:
-        highlight["type"] = highlight_type
+    if resolved_highlight_type:
+        highlight["type"] = resolved_highlight_type
     elif text:
         highlight["type"] = "noteBox"
 
