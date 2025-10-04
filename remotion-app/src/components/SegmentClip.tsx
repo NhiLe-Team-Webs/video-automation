@@ -4,7 +4,7 @@ import {Easing, useCurrentFrame, useVideoConfig, Video} from 'remotion';
 import type {TimelineSegment} from './timeline';
 import type {CameraMovement} from '../types';
 import {useSegmentTransition} from './Transitions';
-import {BrollPlaceholder} from './BrollPlaceholder';
+// import {BrollPlaceholder} from './BrollPlaceholder';
 
 const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
 
@@ -32,99 +32,99 @@ const resolveCameraMovement = (segment: TimelineSegment['segment']): CameraMovem
   return normalizeCameraMovement(metadataValue);
 };
 
-const resolveBrollSubtitle = (segment: TimelineSegment['segment']): string | undefined => {
-  const meta = segment.metadata ?? {};
-  const subtitle = meta['subtitle'] ?? meta['description'];
-  return typeof subtitle === 'string' ? subtitle : undefined;
-};
+// const resolveBrollSubtitle = (segment: TimelineSegment['segment']): string | undefined => {
+//   const meta = segment.metadata ?? {};
+//   const subtitle = meta['subtitle'] ?? meta['description'];
+//   return typeof subtitle === 'string' ? subtitle : undefined;
+// };
 
-const resolveBrollVariant = (segment: TimelineSegment['segment']): 'fullwidth' | 'roundedFrame' => {
-  const meta = segment.metadata ?? {};
-  const styleValue = meta['style'] ?? meta['variant'];
-  if (typeof styleValue === 'string') {
-    const normalized = styleValue.toLowerCase();
-    if (normalized.includes('rounded')) {
-      return 'roundedFrame';
-    }
-  }
-  return 'fullwidth';
-};
+// const resolveBrollVariant = (segment: TimelineSegment['segment']): 'fullwidth' | 'roundedFrame' => {
+//   const meta = segment.metadata ?? {};
+//   const styleValue = meta['style'] ?? meta['variant'];
+//   if (typeof styleValue === 'string') {
+//     const normalized = styleValue.toLowerCase();
+//     if (normalized.includes('rounded')) {
+//       return 'roundedFrame';
+//     }
+//   }
+//   return 'fullwidth';
+// };
 
-const cleanTitle = (title: string | undefined): string | undefined => {
-  if (!title) {
-    return undefined;
-  }
+// const cleanTitle = (title: string | undefined): string | undefined => {
+//   if (!title) {
+//     return undefined;
+//   }
 
-  const withoutParens = title.replace(/\([^)]*\)/g, '').trim();
-  return withoutParens.length ? withoutParens : undefined;
-};
+//   const withoutParens = title.replace(/\([^)]*\)/g, '').trim();
+//   return withoutParens.length ? withoutParens : undefined;
+// };
 
-const resolveBrollKeyword = (segment: TimelineSegment['segment']): string => {
-  const meta = segment.metadata ?? {};
-  const possibleValues = [
-    meta['keyword'],
-    meta['keywords'],
-    meta['searchTerm'],
-    meta['query'],
-    meta['prompt'],
-  ];
+// const resolveBrollKeyword = (segment: TimelineSegment['segment']): string => {
+//   const meta = segment.metadata ?? {};
+//   const possibleValues = [
+//     meta['keyword'],
+//     meta['keywords'],
+//     meta['searchTerm'],
+//     meta['query'],
+//     meta['prompt'],
+//   ];
 
-  for (const value of possibleValues) {
-    if (typeof value === 'string' && value.trim().length) {
-      return value.trim();
-    }
-    if (Array.isArray(value)) {
-      const joined = value
-        .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
-        .filter(Boolean)
-        .join(', ');
-      if (joined.length) {
-        return joined;
-      }
-    }
-  }
+//   for (const value of possibleValues) {
+//     if (typeof value === 'string' && value.trim().length) {
+//       return value.trim();
+//     }
+//     if (Array.isArray(value)) {
+//       const joined = value
+//         .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+//         .filter(Boolean)
+//         .join(', ');
+//       if (joined.length) {
+//         return joined;
+//       }
+//     }
+//   }
 
-  const fallbackFromTitle = cleanTitle(segment.title ?? segment.label);
-  if (fallbackFromTitle) {
-    return fallbackFromTitle;
-  }
+//   const fallbackFromTitle = cleanTitle(segment.title ?? segment.label);
+//   if (fallbackFromTitle) {
+//     return fallbackFromTitle;
+//   }
 
-  return 'keyword';
-};
+//   return 'keyword';
+// };
 
-const resolveBrollMediaType = (
-  segment: TimelineSegment['segment']
-): 'image' | 'video' => {
-  const meta = segment.metadata ?? {};
-  const possibleValues = [meta['assetType'], meta['type'], meta['mediaType'], meta['format']];
+// const resolveBrollMediaType = (
+//   segment: TimelineSegment['segment']
+// ): 'image' | 'video' => {
+//   const meta = segment.metadata ?? {};
+//   const possibleValues = [meta['assetType'], meta['type'], meta['mediaType'], meta['format']];
 
-  const toString = (value: unknown): string | undefined => {
-    if (typeof value === 'string') {
-      return value.toLowerCase();
-    }
-    return undefined;
-  };
+//   const toString = (value: unknown): string | undefined => {
+//     if (typeof value === 'string') {
+//       return value.toLowerCase();
+//     }
+//     return undefined;
+//   };
 
-  for (const raw of possibleValues) {
-    const normalized = toString(raw);
-    if (!normalized) {
-      continue;
-    }
-    if (/(image|photo|picture|graphic)/.test(normalized)) {
-      return 'image';
-    }
-    if (/(video|footage|clip|broll|b-roll)/.test(normalized)) {
-      return 'video';
-    }
-  }
+//   for (const raw of possibleValues) {
+//     const normalized = toString(raw);
+//     if (!normalized) {
+//       continue;
+//     }
+//     if (/(image|photo|picture|graphic)/.test(normalized)) {
+//       return 'image';
+//     }
+//     if (/(video|footage|clip|broll|b-roll)/.test(normalized)) {
+//       return 'video';
+//     }
+//   }
 
-  const combinedTitle = `${segment.title ?? ''} ${segment.label ?? ''}`.toLowerCase();
-  if (/(image|photo|picture|graphic)/.test(combinedTitle)) {
-    return 'image';
-  }
+//   const combinedTitle = `${segment.title ?? ''} ${segment.label ?? ''}`.toLowerCase();
+//   if (/(image|photo|picture|graphic)/.test(combinedTitle)) {
+//     return 'image';
+//   }
 
-  return 'video';
-};
+//   return 'video';
+// };
 
 const easeInOut = Easing.bezier(0.4, 0, 0.2, 1);
 
@@ -200,7 +200,7 @@ export const SegmentClip: React.FC<SegmentClipProps> = ({
   const endAt = startFrom + duration;
   const playbackRate = segment.playbackRate ?? 1;
 
-  const isBroll = (segment.kind ?? 'normal') === 'broll';
+  // const isBroll = (segment.kind ?? 'normal') === 'broll';
 
   const cameraMovement = resolveCameraMovement(segment);
   const cameraStyle = useMemo(
@@ -233,24 +233,15 @@ export const SegmentClip: React.FC<SegmentClipProps> = ({
   return (
     <div style={containerStyle}>
       <div style={transitionContainerStyle}>
-        {isBroll ? (
-          <BrollPlaceholder
-            title={segment.title ?? segment.label ?? 'B-Roll Placeholder'}
-            subtitle={resolveBrollSubtitle(segment)}
-            variant={resolveBrollVariant(segment)}
-            keyword={resolveBrollKeyword(segment)}
-            mediaType={resolveBrollMediaType(segment)}
-          />
-        ) : (
-          <Video
-            src={source}
-            startFrom={startFrom}
-            endAt={endAt}
-            playbackRate={playbackRate}
-            volume={volume}
-            style={videoStyle}
-          />
-        )}
+        {/* Tạm thời bỏ qua placeholder B-roll, luôn phát footage gốc */}
+        <Video
+          src={source}
+          startFrom={startFrom}
+          endAt={endAt}
+          playbackRate={playbackRate}
+          volume={volume}
+          style={videoStyle}
+        />
       </div>
     </div>
   );

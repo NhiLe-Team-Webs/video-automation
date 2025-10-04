@@ -18,9 +18,25 @@ export const TRANSITIONS = {
 };
 
 export const BRAND = {
+  primary: '#C8102E',
   red: '#C8102E',
+  secondary: '#1C1C1C',
+  charcoal: '#1C1C1C',
   black: '#1C1C1C',
-  white: '#fff',
+  white: '#FFFFFF',
+  lightGray: '#F2F2F2',
+  gradient: 'linear-gradient(135deg, rgba(200,16,46,0.95) 0%, rgba(28,28,28,0.98) 60%, rgba(12,12,12,1) 100%)',
+  radialGlow: 'radial-gradient(circle at 20% 20%, rgba(200,16,46,0.25), transparent 65%)',
+  fonts: {
+    heading: "'Montserrat', 'Helvetica Neue', 'Inter', sans-serif",
+    body: "'Open Sans', 'Helvetica Neue', 'Inter', sans-serif",
+  },
+  overlays: {
+    glassBackground: 'rgba(200,16,46,0.48)',
+    glassBorder: 'rgba(255,255,255,0.22)',
+    accentGradient: 'linear-gradient(135deg, rgba(200,16,46,0.9) 0%, rgba(98,11,24,0.9) 100%)',
+    triangle: 'linear-gradient(135deg, rgba(255,255,255,0.35) 0%, rgba(200,16,46,0.6) 100%)',
+  },
 };
 
 export interface RuntimeConfig {
