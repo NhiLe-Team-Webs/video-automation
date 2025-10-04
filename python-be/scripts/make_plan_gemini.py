@@ -245,6 +245,36 @@ def ensure_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def ensure_bool(value: Any, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if not normalized:
+            return default
+        if normalized in {"true", "1", "yes", "y", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "n", "off"}:
+            return False
+        return default
+    return bool(value) if value is not None else default
+
+
+def normalize_segment_kind(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        normalized = value.strip().lower().replace("-", "").replace("_", "").replace(" ", "")
+        if not normalized:
+            return None
+        if normalized in {"broll", "brollplaceholder", "placeholderbroll"}:
+            return "broll"
+        return "broll" if "broll" in normalized else "normal"
+    return "normal"
+
+
 def normalize_sfx_name(value: Any) -> str | None:
     if value is None:
         return None
@@ -563,9 +593,36 @@ def normalize_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
                 "duration": round(duration, 3),
             }
 
+            if "kind" in raw_segment:
+                kind_value = normalize_segment_kind(raw_segment.get("kind"))
+                if kind_value:
+                    segment_plan["kind"] = kind_value
+
             label = (raw_segment.get("label") or raw_segment.get("title") or "").strip()
             if label:
                 segment_plan["label"] = label
+
+            title_value = raw_segment.get("title")
+            if isinstance(title_value, str):
+                title_clean = title_value.strip()
+                if title_clean:
+                    segment_plan["title"] = title_clean
+
+            silence_after_raw = None
+            for key in ("silenceAfter", "silence_after"):
+                if key in raw_segment:
+                    silence_after_raw = raw_segment.get(key)
+                    break
+            if silence_after_raw is not None:
+                segment_plan["silenceAfter"] = ensure_bool(silence_after_raw)
+
+            gap_after_raw = None
+            for key in ("gapAfter", "gap_after"):
+                if key in raw_segment:
+                    gap_after_raw = raw_segment.get(key)
+                    break
+            if gap_after_raw is not None:
+                segment_plan["gapAfter"] = ensure_bool(gap_after_raw)
 
             playback_raw = raw_segment.get("playbackRate", raw_segment.get("speed"))
             if playback_raw is not None:
@@ -600,6 +657,9 @@ def normalize_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
             )
             if camera_movement:
                 segment_plan["cameraMovement"] = camera_movement
+
+            if isinstance(metadata_raw, dict) and metadata_raw:
+                segment_plan["metadata"] = metadata_raw
 
             timeline_start = ensure_float(
                 raw_segment.get("timelineStart", raw_segment.get("timeline_start")),
