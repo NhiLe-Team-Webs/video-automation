@@ -2,9 +2,11 @@ import {AbsoluteFill, Sequence, useVideoConfig} from 'remotion';
 import {useMemo} from 'react';
 import {usePlan} from '../hooks/usePlan';
 import type {FinalCompositionProps, Plan} from '../types';
+import {resolveRuntimeConfig} from '../config';
 import {HighlightsLayer} from './HighlightsLayer';
 import {SfxLayer} from './SfxLayer';
 import {VideoTimeline, buildTimelineMetadata} from './VideoTimeline';
+import type {TimelineSegment} from './timeline';
 
 const DEFAULT_TRANSITION_SECONDS = 0.75;
 
@@ -29,7 +31,9 @@ const PlanAwareTimeline: React.FC<{
   plan: Plan;
   fallbackTransitionDuration: number;
   inputVideo: string;
-}> = ({plan, fallbackTransitionDuration, inputVideo}) => {
+  runtimeConfig: ReturnType<typeof resolveRuntimeConfig>;
+  timeline: TimelineSegment[];
+}> = ({plan, fallbackTransitionDuration, inputVideo, runtimeConfig, timeline}) => {
   const {fps} = useVideoConfig();
   return (
     <VideoTimeline
@@ -37,6 +41,8 @@ const PlanAwareTimeline: React.FC<{
       fps={fps}
       fallbackTransitionDuration={fallbackTransitionDuration}
       inputVideo={inputVideo}
+      runtimeConfig={runtimeConfig}
+      timeline={timeline}
     />
   );
 };
@@ -47,6 +53,7 @@ export const FinalComposition: React.FC<FinalCompositionProps> = ({
   inputVideo = 'input/input.mp4',
   fallbackTransitionDuration = DEFAULT_TRANSITION_SECONDS,
   highlightTheme,
+  config,
 }) => {
   const {fps} = useVideoConfig();
   const shouldLoadPlan = Boolean(planPath);
@@ -54,13 +61,19 @@ export const FinalComposition: React.FC<FinalCompositionProps> = ({
 
   const activePlan = loadedPlan ?? plan ?? null;
 
-  const metadata = useMemo(() => {
+  const runtimeConfig = useMemo(() => resolveRuntimeConfig(config), [config]);
+
+  const timelineMetadata = useMemo(() => {
     if (!activePlan) {
-      return {totalDurationInFrames: fps * 10};
+      return {
+        timeline: [] as TimelineSegment[],
+        totalDurationInFrames: fps * 10,
+      };
     }
-    const nextMetadata = buildTimelineMetadata(activePlan.segments, fps, fallbackTransitionDuration);
+    const computed = buildTimelineMetadata(activePlan.segments, fps, fallbackTransitionDuration);
     return {
-      totalDurationInFrames: Math.max(1, nextMetadata.totalDurationInFrames),
+      timeline: computed.timeline,
+      totalDurationInFrames: Math.max(1, computed.totalDurationInFrames),
     };
   }, [activePlan, fallbackTransitionDuration, fps]);
 
@@ -76,20 +89,27 @@ export const FinalComposition: React.FC<FinalCompositionProps> = ({
 
   return (
     <AbsoluteFill style={{backgroundColor: 'black'}}>
-      <Sequence name="video" durationInFrames={metadata.totalDurationInFrames}>
+      <Sequence name="video" durationInFrames={timelineMetadata.totalDurationInFrames}>
         <PlanAwareTimeline
           plan={activePlan}
           fallbackTransitionDuration={fallbackTransitionDuration}
           inputVideo={inputVideo}
+          runtimeConfig={runtimeConfig}
+          timeline={timelineMetadata.timeline}
         />
       </Sequence>
 
-      <Sequence name="highlights" durationInFrames={metadata.totalDurationInFrames}>
+      <Sequence name="highlights" durationInFrames={timelineMetadata.totalDurationInFrames}>
         <HighlightsLayer highlights={sanitizedHighlights} fps={fps} theme={highlightTheme} />
       </Sequence>
 
-      <Sequence name="sfx" durationInFrames={metadata.totalDurationInFrames}>
-        <SfxLayer highlights={sanitizedHighlights} fps={fps} />
+      <Sequence name="sfx" durationInFrames={timelineMetadata.totalDurationInFrames}>
+        <SfxLayer
+          highlights={sanitizedHighlights}
+          fps={fps}
+          timeline={timelineMetadata.timeline}
+          audioConfig={runtimeConfig.audio}
+        />
       </Sequence>
     </AbsoluteFill>
   );
