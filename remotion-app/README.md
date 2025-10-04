@@ -26,15 +26,28 @@ Launches Remotion Studio so you can scrub through the composition, tweak props, 
 
 ### Render a video
 ```console
-npx remotion render
+npm run render
 ```
-Produces the final output in `out/` using the default composition.
+Produces the final output in `out/` using the default composition. Pass custom props (for example, a different plan path or min-pause override) with the `--props` flag:
+
+```console
+npm run render -- --props '{"planPath":"public/input/plan.json","config":{"minPauseMs":800}}'
+```
+
+The render/build commands rely on the locally installed Remotion CLI, so make sure `npm install` has been executed first.
 
 ### Upgrade Remotion
 ```console
 npx remotion upgrade
 ```
 Fetches the latest compatible Remotion version.
+
+## Runtime configuration
+
+- `src/config.ts` centralizes the audio and transition defaults exposed to the renderer. You can override these values at render time by passing a `config` object through `--props` (see the render example above).
+- Transition logic only fires when `silenceAfter` is `true` on a segment, so upstream planners should compute accurate silence windows.
+- The Remotion layer consumes the extended highlight set (`typewriter`, `noteBox`, `sectionTitle`, and `icon`) and will gracefully no-op unknown types.
+- B-roll placeholders (`segment.kind === "broll"`) render via `BrollPlaceholder` and can be swapped with real footage later without changing the plan contract.
 
 ## Documentation
 

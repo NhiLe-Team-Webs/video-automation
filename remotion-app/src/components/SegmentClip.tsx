@@ -4,6 +4,7 @@ import {Easing, useCurrentFrame, useVideoConfig, Video} from 'remotion';
 import type {TimelineSegment} from './timeline';
 import type {CameraMovement} from '../types';
 import {useSegmentTransition} from './Transitions';
+import {BrollPlaceholder} from './BrollPlaceholder';
 
 const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
 
@@ -29,6 +30,24 @@ const resolveCameraMovement = (segment: TimelineSegment['segment']): CameraMovem
   }
   const metadataValue = segment.metadata?.['cameraMovement'];
   return normalizeCameraMovement(metadataValue);
+};
+
+const resolveBrollSubtitle = (segment: TimelineSegment['segment']): string | undefined => {
+  const meta = segment.metadata ?? {};
+  const subtitle = meta['subtitle'] ?? meta['description'];
+  return typeof subtitle === 'string' ? subtitle : undefined;
+};
+
+const resolveBrollVariant = (segment: TimelineSegment['segment']): 'fullwidth' | 'roundedFrame' => {
+  const meta = segment.metadata ?? {};
+  const styleValue = meta['style'] ?? meta['variant'];
+  if (typeof styleValue === 'string') {
+    const normalized = styleValue.toLowerCase();
+    if (normalized.includes('rounded')) {
+      return 'roundedFrame';
+    }
+  }
+  return 'fullwidth';
 };
 
 const easeInOut = Easing.bezier(0.4, 0, 0.2, 1);
@@ -70,9 +89,17 @@ export interface SegmentClipProps {
   timelineSegment: TimelineSegment;
   source: string;
   fps: number;
+  audioCrossfade: boolean;
+  defaultTransitionDuration: number;
 }
 
-export const SegmentClip: React.FC<SegmentClipProps> = ({timelineSegment, source, fps}) => {
+export const SegmentClip: React.FC<SegmentClipProps> = ({
+  timelineSegment,
+  source,
+  fps,
+  audioCrossfade,
+  defaultTransitionDuration,
+}) => {
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const {segment, duration, transitionInFrames, transitionOutFrames} = timelineSegment;
@@ -89,11 +116,15 @@ export const SegmentClip: React.FC<SegmentClipProps> = ({timelineSegment, source
     width,
     height,
     fps,
+    audioCrossfade,
+    defaultTransitionDuration,
   });
 
-  const startFrom = Math.round(segment.sourceStart * fps);
+  const startFrom = Math.round((segment.sourceStart ?? 0) * fps);
   const endAt = startFrom + duration;
   const playbackRate = segment.playbackRate ?? 1;
+
+  const isBroll = (segment.kind ?? 'normal') === 'broll';
 
   const cameraMovement = resolveCameraMovement(segment);
   const cameraStyle = useMemo(
@@ -126,14 +157,22 @@ export const SegmentClip: React.FC<SegmentClipProps> = ({timelineSegment, source
   return (
     <div style={containerStyle}>
       <div style={transitionContainerStyle}>
-        <Video
-          src={source}
-          startFrom={startFrom}
-          endAt={endAt}
-          playbackRate={playbackRate}
-          volume={volume}
-          style={videoStyle}
-        />
+        {isBroll ? (
+          <BrollPlaceholder
+            title={segment.title ?? segment.label ?? 'B-Roll Placeholder'}
+            subtitle={resolveBrollSubtitle(segment)}
+            variant={resolveBrollVariant(segment)}
+          />
+        ) : (
+          <Video
+            src={source}
+            startFrom={startFrom}
+            endAt={endAt}
+            playbackRate={playbackRate}
+            volume={volume}
+            style={videoStyle}
+          />
+        )}
       </div>
     </div>
   );

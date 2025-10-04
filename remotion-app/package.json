@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "sync-assets": "node ./scripts/sync-assets.mjs",
+    "clean-sync": "rimraf ./public && node ./scripts/sync-assets.mjs",
     "prestart": "npm run sync-assets",
     "start": "remotion preview",
     "prebuild": "npm run sync-assets",
@@ -18,12 +19,15 @@
     "@remotion/renderer": "4.0.61",
     "@types/react": "18.2.47",
     "@types/react-dom": "18.2.17",
-    "remotion": "4.0.61",
+    "lucide-react": "^0.544.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-icons": "^5.5.0",
+    "remotion": "4.0.61",
     "zod": "3.23.8"
   },
   "devDependencies": {
+    "rimraf": "^6.0.1",
     "typescript": "5.3.3"
   }
 }

@@ -27,6 +27,7 @@ export const RemotionRoot: React.FC = () => {
           accentColor: '#38bdf8',
           fontFamily: 'Inter, sans-serif',
         },
+        config: {},
       }}
     />
   );

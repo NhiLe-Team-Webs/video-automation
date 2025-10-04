@@ -1,11 +1,4 @@
-export type TransitionType =
-  | 'cut'
-  | 'crossfade'
-  | 'slide'
-  | 'zoom'
-  | 'scale'
-  | 'rotate'
-  | 'blur';
+export type TransitionType = 'cut' | 'fadeCamera' | 'slideWhoosh';
 
 export type TransitionDirection = 'left' | 'right' | 'up' | 'down';
 
@@ -13,51 +6,58 @@ export interface TransitionPlan {
   type: TransitionType;
   duration?: number;
   direction?: TransitionDirection;
-  intensity?: number;
+  sfx?: string;
 }
+
+export type SegmentKind = 'normal' | 'broll';
 
 export type CameraMovement = 'static' | 'zoomIn' | 'zoomOut';
 
 export interface SegmentPlan {
   id: string;
-  sourceStart: number;
+  kind?: SegmentKind;
+  sourceStart?: number;
   duration: number;
   transitionIn?: TransitionPlan;
   transitionOut?: TransitionPlan;
   label?: string;
+  title?: string;
   playbackRate?: number;
   cameraMovement?: CameraMovement;
+  silenceAfter?: boolean;
   metadata?: Record<string, unknown>;
 }
 
+export type HighlightType = 'typewriter' | 'noteBox' | 'sectionTitle' | 'icon';
+
 export type HighlightPosition = 'top' | 'center' | 'bottom';
-
-export type HighlightAnimation =
-  | 'fade'
-  | 'zoom'
-  | 'slide'
-  | 'bounce'
-  | 'float'
-  | 'flip'
-  | 'typewriter';
-
-export type HighlightVariant = 'callout' | 'blurred' | 'cutaway' | 'brand' | 'typewriter';
 
 export interface HighlightPlan {
   id: string;
-  text: string;
+  type?: HighlightType;
+  text?: string;
+  title?: string;
+  subtitle?: string;
+  badge?: string;
+  name?: string;
+  asset?: string;
   start: number;
   duration: number;
   position?: HighlightPosition;
-  animation?: HighlightAnimation;
+  side?: 'bottom' | 'left' | 'right' | 'top';
+  bg?: string;
+  radius?: number;
   sfx?: string;
-  volume?: number;
-  variant?: HighlightVariant;
+  gain?: number;
+  ducking?: boolean;
+  variant?: string;
+  [key: string]: unknown;
 }
 
 export interface Plan {
   segments: SegmentPlan[];
   highlights: HighlightPlan[];
+  meta?: Record<string, unknown>;
 }
 
 export interface HighlightTheme {
@@ -67,10 +67,18 @@ export interface HighlightTheme {
   fontFamily?: string;
 }
 
+export interface CompositionConfigOverrides {
+  minPauseMs?: number;
+  audio?: Partial<{voiceDuckDb: number; sfxBaseGainDb: number}>;
+  transitions?: Partial<{defaultFade: number}>;
+  brand?: Partial<{red: string; black: string; white: string}>;
+}
+
 export interface FinalCompositionProps {
   plan?: Plan | null;
   planPath?: string;
   inputVideo?: string;
   fallbackTransitionDuration?: number;
   highlightTheme?: HighlightTheme;
+  config?: CompositionConfigOverrides;
 }

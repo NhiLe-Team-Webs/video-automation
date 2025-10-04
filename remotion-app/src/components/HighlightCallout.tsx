@@ -1,6 +1,6 @@
 import {interpolate, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {HighlightPlan, HighlightTheme} from '../types';
-import {renderHighlightVariant} from './TextHighlightVariants';
+import {renderHighlightByType} from './TextHighlightVariants';
 
 export interface HighlightCalloutProps {
   highlight: HighlightPlan;
@@ -34,14 +34,11 @@ export const HighlightCallout: React.FC<HighlightCalloutProps> = ({
     }
   );
 
-  const animation = highlight.animation ?? 'fade';
-  const content = renderHighlightVariant({
+  const content = renderHighlightByType({
     highlight,
     theme,
     appear,
     exit,
-    animation,
-    variant: highlight.variant,
     width,
     height,
   });

@@ -23,7 +23,7 @@ if (!existsSync(assetsDir)) {
 }
 
 const ensureDir = (dir) => {
-  mkdirSync(dir, {recursive: true});
+  mkdirSync(dir, { recursive: true });
 };
 
 const removePath = (targetPath) => {
@@ -32,14 +32,38 @@ const removePath = (targetPath) => {
   }
 
   const stats = lstatSync(targetPath);
-  if (stats.isDirectory() && !stats.isSymbolicLink()) {
-    rmSync(targetPath, {recursive: true, force: true});
-  } else {
-    rmSync(targetPath, {force: true});
+
+  const removeRecursive = () =>
+    rmSync(targetPath, { recursive: true, force: true, maxRetries: 5 });
+
+  try {
+    if (stats.isSymbolicLink()) {
+      rmSync(targetPath, { force: true });
+      return;
+    }
+
+    if (stats.isDirectory()) {
+      removeRecursive();
+      return;
+    }
+
+    rmSync(targetPath, { force: true });
+  } catch (error) {
+    if (
+      error?.code === 'ERR_FS_EISDIR' ||
+      error?.code === 'EISDIR' ||
+      error?.code === 'EPERM' ||
+      error?.code === 'EACCES'
+    ) {
+      removeRecursive();
+      return;
+    }
+
+    throw error;
   }
 };
 
-const ensureLinkWithFallback = (source, destination, {label, fallbackCopy}) => {
+const ensureLinkWithFallback = (source, destination, { label, fallbackCopy }) => {
   removePath(destination);
   try {
     symlinkSync(source, destination, linkType);
@@ -47,21 +71,27 @@ const ensureLinkWithFallback = (source, destination, {label, fallbackCopy}) => {
     return true;
   } catch (error) {
     console.warn(
-      `[${label}] Failed to create symlink: ${error instanceof Error ? error.message : String(error)}`,
+      `[${label}] Failed to create symlink: ${
+        error instanceof Error ? error.message : String(error)
+      }`
     );
-    if (!fallbackCopy) {
-      return false;
-    }
-    cpSync(source, destination, {recursive: true});
+    if (!fallbackCopy) return false;
+
+    cpSync(source, destination, { recursive: true });
     console.log(`[${label}] Copied contents into ${destination}`);
     return false;
   }
 };
 
+// Ensure shared directories exist
 ensureDir(sharedPublicDir);
 ensureDir(sharedInputDir);
 
-ensureLinkWithFallback(assetsDir, sharedAssetsLink, {label: 'assets', fallbackCopy: true});
+// Create symlink or fallback copy
+ensureLinkWithFallback(assetsDir, sharedAssetsLink, {
+  label: 'assets',
+  fallbackCopy: true,
+});
 const linkedPublic = ensureLinkWithFallback(sharedPublicDir, appPublicDir, {
   label: 'public',
   fallbackCopy: true,
@@ -69,6 +99,6 @@ const linkedPublic = ensureLinkWithFallback(sharedPublicDir, appPublicDir, {
 
 if (!linkedPublic) {
   console.log(
-    `[public] Using a copied public workspace. Keep in mind updates under ${sharedPublicDir} will not auto-sync.`,
+    `[public] Using a copied public workspace. Keep in mind updates under ${sharedPublicDir} will not auto-sync.`
   );
 }
