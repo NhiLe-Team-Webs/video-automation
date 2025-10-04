@@ -1,0 +1,37 @@
+{
+  "segments": [
+    {
+      "id": "talk-1",
+      "sourceStart": 0.0,
+      "duration": 4.2,
+      "label": "Intro",
+      "silenceAfter": true,
+      "transitionOut": {
+        "type": "crossfade",
+        "duration": 0.5
+      }
+    },
+    {
+      "id": "broll-1",
+      "sourceStart": 4.2,
+      "duration": 3.5,
+      "kind": "broll",
+      "label": "City skyline",
+      "title": "City skyline",
+      "cameraMovement": "zoomIn",
+      "metadata": {
+        "subtitle": "B-roll city skyline",
+        "keyword": "city",
+        "cameraMovement": "zoom in"
+      }
+    },
+    {
+      "id": "talk-2",
+      "sourceStart": 7.8,
+      "duration": 5.0,
+      "kind": "normal",
+      "gapAfter": false
+    }
+  ],
+  "highlights": []
+}

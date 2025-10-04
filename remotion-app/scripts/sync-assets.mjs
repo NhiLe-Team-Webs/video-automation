@@ -16,6 +16,8 @@ const sharedInputDir = path.join(sharedPublicDir, 'input');
 const appPublicDir = path.join(process.cwd(), 'public');
 
 const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+const shouldAttemptSymlink =
+  process.platform !== 'win32' || process.env.ALLOW_WINDOWS_SYMLINKS === 'true';
 
 if (!existsSync(assetsDir)) {
   console.error(`[assets] Shared assets directory not found: ${assetsDir}`);
@@ -65,6 +67,22 @@ const removePath = (targetPath) => {
 
 const ensureLinkWithFallback = (source, destination, { label, fallbackCopy }) => {
   removePath(destination);
+
+  if (!shouldAttemptSymlink) {
+    if (!fallbackCopy) {
+      console.warn(
+        `[${label}] Symlinks disabled on Windows; set ALLOW_WINDOWS_SYMLINKS="true" to enable.`
+      );
+      return false;
+    }
+
+    cpSync(source, destination, { recursive: true });
+    console.log(
+      `[${label}] Copied contents into ${destination} (symlink disabled on Windows)`
+    );
+    return false;
+  }
+
   try {
     symlinkSync(source, destination, linkType);
     console.log(`[${label}] Symlinked ${destination} -> ${source}`);

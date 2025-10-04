@@ -11,10 +11,17 @@ import {
   BarChart3,
   Megaphone,
   Trophy,
+  CalendarClock,
+  Users,
+  MessageCircle,
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import {FaPlayCircle, FaRobot, FaGraduationCap, FaBolt} from 'react-icons/fa';
 import {SiTiktok, SiYoutube, SiLinkedin} from 'react-icons/si';
 import {MdCelebration, MdOutlineAutoAwesome} from 'react-icons/md';
+import * as FaIcons from 'react-icons/fa';
+import * as MdIcons from 'react-icons/md';
+import * as SiIcons from 'react-icons/si';
 import type {IconAnimation} from '../types';
 
 export type IconComponent = ComponentType<{
@@ -213,6 +220,18 @@ const curatedEntries: CuratedIconEntry[] = [
     },
   },
   {
+    aliases: ['schedule', 'calendar', 'timeline', 'lucide:calendarclock'],
+    descriptor: {
+      id: 'schedule',
+      component: CalendarClock,
+      source: 'lucide',
+      defaultAccent: '#38bdf8',
+      defaultBackground: 'linear-gradient(135deg, rgba(56,189,248,0.14) 0%, rgba(17,24,39,0.94) 100%)',
+      defaultSfx: 'assets/sfx/ui/notification.mp3',
+      defaultAnimation: 'float',
+    },
+  },
+  {
     aliases: ['award', 'trophy', 'lucide:trophy'],
     descriptor: {
       id: 'trophy',
@@ -222,6 +241,30 @@ const curatedEntries: CuratedIconEntry[] = [
       defaultBackground: 'linear-gradient(135deg, rgba(250,204,21,0.18) 0%, rgba(15,23,42,0.94) 100%)',
       defaultSfx: 'assets/sfx/emotion/applause.mp3',
       defaultAnimation: 'pulse',
+    },
+  },
+  {
+    aliases: ['community', 'team', 'audience', 'lucide:users'],
+    descriptor: {
+      id: 'community',
+      component: Users,
+      source: 'lucide',
+      defaultAccent: '#f472b6',
+      defaultBackground: 'linear-gradient(135deg, rgba(244,114,182,0.16) 0%, rgba(15,23,42,0.94) 100%)',
+      defaultSfx: 'assets/sfx/emotion/applause.mp3',
+      defaultAnimation: 'pulse',
+    },
+  },
+  {
+    aliases: ['message', 'chat', 'support', 'lucide:messagecircle'],
+    descriptor: {
+      id: 'chat',
+      component: MessageCircle,
+      source: 'lucide',
+      defaultAccent: '#60a5fa',
+      defaultBackground: 'linear-gradient(135deg, rgba(96,165,250,0.16) 0%, rgba(15,23,42,0.94) 100%)',
+      defaultSfx: 'assets/sfx/ui/bubble-pop.mp3',
+      defaultAnimation: 'float',
     },
   },
   {
@@ -339,6 +382,129 @@ const buildLookupKeys = (value: string) => {
   return Array.from(keys);
 };
 
+const isIconComponent = (value: unknown): value is IconComponent => {
+  if (!value) {
+    return false;
+  }
+  if (typeof value === 'function') {
+    return true;
+  }
+  if (typeof value === 'object') {
+    return '$$typeof' in (value as Record<string, unknown>);
+  }
+  return false;
+};
+
+const toComponentName = (raw: string | undefined | null) => {
+  if (!raw) {
+    return null;
+  }
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (/[A-Z]/.test(trimmed) && !/[\s:_-]/.test(trimmed)) {
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }
+  const parts = trimmed.split(/[\s:_-]+/).filter(Boolean);
+  if (!parts.length) {
+    return null;
+  }
+  return parts
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join('');
+};
+
+const tryResolveLucideIcon = (iconName: string): IconVisual | null => {
+  const componentName = toComponentName(iconName);
+  if (!componentName) {
+    return null;
+  }
+  const component = (LucideIcons as Record<string, unknown>)[componentName];
+  if (!isIconComponent(component)) {
+    return null;
+  }
+  const id = normalizeKey(`lucide-${componentName}`) || componentName.toLowerCase();
+  return {
+    id,
+    component,
+    source: 'lucide',
+  };
+};
+
+const REACT_ICON_PACKS = {
+  fa: {module: FaIcons, prefix: 'Fa', source: 'react-icons/fa' as const},
+  md: {module: MdIcons, prefix: 'Md', source: 'react-icons/md' as const},
+  si: {module: SiIcons, prefix: 'Si', source: 'react-icons/si' as const},
+} satisfies Record<string, {module: Record<string, unknown>; prefix: string; source: IconSource}>;
+
+type ReactIconPackKey = keyof typeof REACT_ICON_PACKS;
+
+const reactIconPrefixMap: Record<string, ReactIconPackKey> = {
+  fa: 'fa',
+  'react-icons/fa': 'fa',
+  md: 'md',
+  'react-icons/md': 'md',
+  si: 'si',
+  'react-icons/si': 'si',
+};
+
+const tryResolveReactIcon = (
+  prefix: string,
+  iconName: string,
+): IconVisual | null => {
+  const key = reactIconPrefixMap[prefix.toLowerCase()];
+  if (!key) {
+    return null;
+  }
+  const pack = REACT_ICON_PACKS[key];
+  const componentName = toComponentName(iconName);
+  if (!componentName) {
+    return null;
+  }
+  const lookupName = `${pack.prefix}${componentName}`;
+  const component = pack.module[lookupName as keyof typeof pack.module];
+  if (!isIconComponent(component)) {
+    return null;
+  }
+  const id = normalizeKey(`${pack.prefix}-${componentName}`) || lookupName.toLowerCase();
+  return {
+    id,
+    component: component as IconComponent,
+    source: pack.source,
+  };
+};
+
+const tryResolveFallbackIcon = (candidate: string): IconVisual | null => {
+  const trimmed = candidate.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const separatorIndex = trimmed.indexOf(':');
+  if (separatorIndex === -1) {
+    return null;
+  }
+  const prefix = trimmed.slice(0, separatorIndex);
+  const iconName = trimmed.slice(separatorIndex + 1);
+  if (!iconName) {
+    return null;
+  }
+  if (prefix.toLowerCase() === 'lucide') {
+    return tryResolveLucideIcon(iconName);
+  }
+  return tryResolveReactIcon(prefix, iconName);
+};
+
+const resolveWithFallback = (candidates: string[]): IconVisual | null => {
+  for (const candidate of candidates) {
+    const descriptor = tryResolveFallbackIcon(candidate);
+    if (descriptor) {
+      return descriptor;
+    }
+  }
+  return null;
+};
+
 export const resolveIconVisual = (name?: string | null): IconVisual | null => {
   if (!name) {
     return null;
@@ -354,5 +520,5 @@ export const resolveIconVisual = (name?: string | null): IconVisual | null => {
       return {...descriptor};
     }
   }
-  return null;
+  return resolveWithFallback(candidates);
 };

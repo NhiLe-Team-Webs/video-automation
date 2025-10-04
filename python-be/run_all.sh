@@ -4,7 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-SOURCE_VIDEO="${1:-inputs/input.mp4}"
+# ✅ Default input video nằm trong public/input thay vì python-be/inputs
+SOURCE_VIDEO="${1:-$SCRIPT_DIR/../public/input/input.mp4}"
+
 OUTPUT_DIR="$SCRIPT_DIR/outputs"
 PUBLIC_ROOT="$SCRIPT_DIR/../public"
 PUBLIC_INPUT="$PUBLIC_ROOT/input"
@@ -48,6 +50,7 @@ else
   python scripts/make_plan_from_srt.py "$WHISPER_SRT" "$PLAN_MAPPING" "$PLAN_TMP"
 fi
 
+# ✅ Copy kết quả ngược lại public/input để Remotion đọc
 cp "$AUTO_EDITOR_OUTPUT" "$PUBLIC_INPUT/input.mp4"
 cp "$PLAN_TMP" "$PUBLIC_INPUT/plan.json"
 
