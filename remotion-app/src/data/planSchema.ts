@@ -97,8 +97,34 @@ const segmentPlanSchema: z.ZodType<SegmentPlan> = z
     } as SegmentPlan;
   });
 
+const normalizeHighlightTypeToken = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmed = value.trim().toLowerCase();
+  const collapsed = trimmed.replace(/[\s_-]+/g, '');
+
+  switch (collapsed) {
+    case 'icon':
+    case 'iconhighlight':
+      return 'icon';
+    case 'notebox':
+      return 'noteBox';
+    case 'sectiontitle':
+      return 'sectionTitle';
+    case 'typewriter':
+      return 'typewriter';
+    default:
+      return value;
+  }
+};
+
 const highlightTypeSchema: z.ZodType<HighlightType> = z
-  .enum(['typewriter', 'noteBox', 'sectionTitle', 'icon'])
+  .preprocess(
+    normalizeHighlightTypeToken,
+    z.enum(['typewriter', 'noteBox', 'sectionTitle', 'icon']),
+  )
   .catch('noteBox');
 
 const highlightPositionSchema: z.ZodType<HighlightPosition> = z
