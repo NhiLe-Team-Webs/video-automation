@@ -50,6 +50,82 @@ const resolveBrollVariant = (segment: TimelineSegment['segment']): 'fullwidth' |
   return 'fullwidth';
 };
 
+const cleanTitle = (title: string | undefined): string | undefined => {
+  if (!title) {
+    return undefined;
+  }
+
+  const withoutParens = title.replace(/\([^)]*\)/g, '').trim();
+  return withoutParens.length ? withoutParens : undefined;
+};
+
+const resolveBrollKeyword = (segment: TimelineSegment['segment']): string => {
+  const meta = segment.metadata ?? {};
+  const possibleValues = [
+    meta['keyword'],
+    meta['keywords'],
+    meta['searchTerm'],
+    meta['query'],
+    meta['prompt'],
+  ];
+
+  for (const value of possibleValues) {
+    if (typeof value === 'string' && value.trim().length) {
+      return value.trim();
+    }
+    if (Array.isArray(value)) {
+      const joined = value
+        .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+        .filter(Boolean)
+        .join(', ');
+      if (joined.length) {
+        return joined;
+      }
+    }
+  }
+
+  const fallbackFromTitle = cleanTitle(segment.title ?? segment.label);
+  if (fallbackFromTitle) {
+    return fallbackFromTitle;
+  }
+
+  return 'keyword';
+};
+
+const resolveBrollMediaType = (
+  segment: TimelineSegment['segment']
+): 'image' | 'video' => {
+  const meta = segment.metadata ?? {};
+  const possibleValues = [meta['assetType'], meta['type'], meta['mediaType'], meta['format']];
+
+  const toString = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+      return value.toLowerCase();
+    }
+    return undefined;
+  };
+
+  for (const raw of possibleValues) {
+    const normalized = toString(raw);
+    if (!normalized) {
+      continue;
+    }
+    if (/(image|photo|picture|graphic)/.test(normalized)) {
+      return 'image';
+    }
+    if (/(video|footage|clip|broll|b-roll)/.test(normalized)) {
+      return 'video';
+    }
+  }
+
+  const combinedTitle = `${segment.title ?? ''} ${segment.label ?? ''}`.toLowerCase();
+  if (/(image|photo|picture|graphic)/.test(combinedTitle)) {
+    return 'image';
+  }
+
+  return 'video';
+};
+
 const easeInOut = Easing.bezier(0.4, 0, 0.2, 1);
 
 const computeCameraTransform = (
@@ -162,6 +238,8 @@ export const SegmentClip: React.FC<SegmentClipProps> = ({
             title={segment.title ?? segment.label ?? 'B-Roll Placeholder'}
             subtitle={resolveBrollSubtitle(segment)}
             variant={resolveBrollVariant(segment)}
+            keyword={resolveBrollKeyword(segment)}
+            mediaType={resolveBrollMediaType(segment)}
           />
         ) : (
           <Video
