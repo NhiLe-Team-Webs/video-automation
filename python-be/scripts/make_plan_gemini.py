@@ -73,7 +73,18 @@ SFX_LOOKUP = _build_sfx_lookup()
 TRANSITION_TYPES = ["cut", "crossfade", "slide", "zoom", "scale", "rotate", "blur"]
 TRANSITION_DIRECTIONS = ["left", "right", "up", "down"]
 HIGHLIGHT_POSITIONS = ["top", "center", "bottom"]
-HIGHLIGHT_ANIMATIONS = ["fade", "zoom", "slide", "bounce", "float", "flip", "typewriter"]
+HIGHLIGHT_ANIMATIONS = [
+    "fade",
+    "zoom",
+    "slide",
+    "bounce",
+    "float",
+    "flip",
+    "typewriter",
+    "pulse",
+    "spin",
+    "pop",
+]
 HIGHLIGHT_VARIANTS = ["callout", "blurred", "brand", "cutaway", "typewriter"]
 MAX_HIGHLIGHTS = 6
 DEFAULT_HIGHLIGHT_DURATION = 2.6
@@ -187,7 +198,14 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         + "; với `zoom`/`scale`/`rotate`/`blur` có thể set `intensity` trong khoảng 0.1-0.35 để kiểm soát độ mạnh.\n"
         "- Trim/merge câu khi khoảng lặng > ~0.7s trừ khi cần giữ nhịp cảm xúc.\n"
         f"- Chỉ tạo tối đa {MAX_HIGHLIGHTS} highlight mạnh nhất. Duy trì mỗi highlight 2-4s.\n"
-        "- `highlights` gồm `text`, `start`, `duration`, `position` (" + highlight_positions + "), `animation` (" + highlight_animations + "), `variant` (blurred/brand/cutaway/typewriter) và `sfx` nếu cần.\n"
+        "- `highlights` mô tả khoảnh khắc cần nhấn mạnh. Với highlight chữ, cung cấp `type` (noteBox/typewriter/sectionTitle), `text`, `start`, `duration`, `position` ("
+        + highlight_positions
+        + "), `animation` ("
+        + highlight_animations
+        + "), `variant` (blurred/brand/cutaway/typewriter) và `sfx` nếu cần.\n"
+        "- Để tạo highlight icon, dùng `type: \"icon\"` với `name` (tiêu đề ngắn), `icon` (ví dụ: `launch`, `fa:robot`), tùy chọn `accentColor`, `backgroundColor`, `iconColor`, `animation` ("
+        + highlight_animations
+        + ") cùng `sfx`/`volume` nếu phù hợp.\n"
         "- SFX phải chọn từ thư viện assets/sfx với path tương đối (vd: assets/sfx/ui/pop.mp3 hoặc ui/pop.mp3). Danh sách: "
         + sfx_names
         + ". Gợi ý: "
@@ -335,8 +353,35 @@ def normalize_highlight_item(raw: Dict[str, Any], index: int) -> Dict[str, Any] 
     if not isinstance(raw, dict):
         return None
 
-    text = (raw.get("text") or raw.get("caption") or raw.get("title") or "").strip()
-    if not text:
+    highlight_type_raw = raw.get("type") or raw.get("kind") or raw.get("layout")
+    highlight_type: str | None = None
+    if isinstance(highlight_type_raw, str):
+        type_key = highlight_type_raw.strip().lower().replace(" ", "").replace("-", "").replace("_", "")
+        type_map = {
+            "highlight": "noteBox",
+            "caption": "noteBox",
+            "callout": "noteBox",
+            "notebox": "noteBox",
+            "notecard": "noteBox",
+            "quote": "noteBox",
+            "typewriter": "typewriter",
+            "section": "sectionTitle",
+            "sectiontitle": "sectionTitle",
+            "titlecard": "sectionTitle",
+            "chapter": "sectionTitle",
+            "icon": "icon",
+            "iconhighlight": "icon",
+        }
+        highlight_type = type_map.get(type_key, highlight_type_raw.strip())
+
+    text = (raw.get("text") or raw.get("caption") or "").strip()
+    title = (raw.get("title") or "").strip()
+    subtitle = (raw.get("subtitle") or "").strip()
+    badge = (raw.get("badge") or "").strip()
+    name = (raw.get("name") or raw.get("label") or "").strip()
+    icon_value = (raw.get("icon") or raw.get("iconName") or "").strip()
+
+    if not any([text, title, subtitle, badge, name, icon_value]):
         return None
 
     start = ensure_float(raw.get("start", raw.get("time", 0.0)), 0.0)
@@ -355,18 +400,67 @@ def normalize_highlight_item(raw: Dict[str, Any], index: int) -> Dict[str, Any] 
     if position not in HIGHLIGHT_POSITIONS:
         position = "center"
 
-    animation = (raw.get("animation") or raw.get("style") or "fade").lower()
-    if animation not in HIGHLIGHT_ANIMATIONS:
-        animation = "fade"
+    animation_raw = raw.get("animation") or raw.get("style") or raw.get("motion")
+    animation_default = "pop" if highlight_type == "icon" else "fade"
+    animation_key = ""
+    if isinstance(animation_raw, str):
+        animation_key = animation_raw.strip().lower().replace(" ", "").replace("-", "").replace("_", "")
+    animation_map = {
+        "fade": "fade",
+        "fadein": "fade",
+        "zoom": "zoom",
+        "zoomin": "zoom",
+        "punch": "pop",
+        "punchin": "pop",
+        "pop": "pop",
+        "popin": "pop",
+        "bounce": "bounce",
+        "float": "float",
+        "floating": "float",
+        "flip": "flip",
+        "spin": "spin",
+        "rotate": "spin",
+        "typewriter": "typewriter",
+        "pulse": "pulse",
+        "breath": "pulse",
+        "beat": "pulse",
+        "slide": "slide",
+        "slideup": "slide",
+        "slidedown": "slide",
+        "slideleft": "slide",
+        "slideright": "slide",
+    }
+    animation = animation_map.get(animation_key, animation_default)
 
-    highlight = {
+    highlight: Dict[str, Any] = {
         "id": str(raw.get("id") or f"highlight-{index + 1:02d}"),
-        "text": text,
         "start": round(start, 3),
         "duration": round(duration, 3),
         "position": position,
         "animation": animation,
     }
+
+    if highlight_type:
+        highlight["type"] = highlight_type
+    elif text:
+        highlight["type"] = "noteBox"
+
+    if text:
+        highlight["text"] = text
+    if title:
+        highlight["title"] = title
+    if subtitle:
+        highlight["subtitle"] = subtitle
+    if badge:
+        highlight["badge"] = badge
+    if name:
+        highlight["name"] = name
+    if icon_value:
+        highlight["icon"] = icon_value
+
+    asset = (raw.get("asset") or raw.get("media") or "").strip()
+    if asset:
+        highlight["asset"] = asset
 
     variant_raw = raw.get("variant") or raw.get("layout") or raw.get("styleVariant")
     if variant_raw:
@@ -397,6 +491,31 @@ def normalize_highlight_item(raw: Dict[str, Any], index: int) -> Dict[str, Any] 
             else:
                 sfx_name = f"assets/sfx/{sfx_name}"
         highlight["sfx"] = sfx_name
+
+    accent_color = raw.get("accentColor") or raw.get("accent")
+    if isinstance(accent_color, str) and accent_color.strip():
+        highlight["accentColor"] = accent_color.strip()
+
+    background_color = raw.get("backgroundColor") or raw.get("background") or raw.get("bg")
+    if isinstance(background_color, str) and background_color.strip():
+        highlight["backgroundColor"] = background_color.strip()
+
+    icon_color = raw.get("iconColor") or raw.get("iconColour")
+    if isinstance(icon_color, str) and icon_color.strip():
+        highlight["iconColor"] = icon_color.strip()
+
+    side = (raw.get("side") or raw.get("alignment") or "").strip().lower()
+    if side in {"top", "bottom", "left", "right"}:
+        highlight["side"] = side
+
+    radius = raw.get("radius")
+    if radius is not None:
+        try:
+            radius_float = float(radius)
+        except (TypeError, ValueError):
+            radius_float = None
+        if radius_float is not None and radius_float > 0:
+            highlight["radius"] = round(radius_float, 3)
 
     volume = raw.get("volume")
     if volume is not None:
@@ -496,7 +615,10 @@ def normalize_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
         raw_highlights = list(plan["highlights"])
     elif isinstance(plan.get("actions"), list):
         for action in plan.get("actions", []):
-            if isinstance(action, dict) and (action.get("type") or "").lower() in {"caption", "highlight"}:
+            if not isinstance(action, dict):
+                continue
+            action_type = (action.get("type") or action.get("kind") or "").lower()
+            if action_type in {"caption", "highlight", "icon", "notebox", "typewriter", "section", "sectiontitle"}:
                 raw_highlights.append(action)
 
     normalized_highlights: List[Dict[str, Any]] = []
