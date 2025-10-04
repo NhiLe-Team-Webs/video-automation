@@ -32,11 +32,14 @@ const removePath = (targetPath) => {
   }
 
   const stats = lstatSync(targetPath);
-  if (stats.isDirectory() && !stats.isSymbolicLink()) {
-    rmSync(targetPath, {recursive: true, force: true});
-  } else {
+  const options = {recursive: true, force: true};
+
+  if (stats.isSymbolicLink()) {
     rmSync(targetPath, {force: true});
+    return;
   }
+
+  rmSync(targetPath, options);
 };
 
 const ensureLinkWithFallback = (source, destination, {label, fallbackCopy}) => {
