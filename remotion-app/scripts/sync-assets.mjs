@@ -27,19 +27,41 @@ const ensureDir = (dir) => {
 };
 
 const removePath = (targetPath) => {
-  if (!existsSync(targetPath)) return;
-
-  const stats = lstatSync(targetPath);
-  const options = {recursive: true, force: true};
-
-  if (stats.isSymbolicLink()) {
-    rmSync(targetPath, {force: true});
+  if (!existsSync(targetPath)) {
     return;
   }
 
-  rmSync(targetPath, options);
-};
+  const stats = lstatSync(targetPath);
 
+  const removeRecursive = () =>
+    rmSync(targetPath, { recursive: true, force: true, maxRetries: 5 });
+
+  try {
+    if (stats.isSymbolicLink()) {
+      rmSync(targetPath, { force: true });
+      return;
+    }
+
+    if (stats.isDirectory()) {
+      removeRecursive();
+      return;
+    }
+
+    rmSync(targetPath, { force: true });
+  } catch (error) {
+    if (
+      error?.code === 'ERR_FS_EISDIR' ||
+      error?.code === 'EISDIR' ||
+      error?.code === 'EPERM' ||
+      error?.code === 'EACCES'
+    ) {
+      removeRecursive();
+      return;
+    }
+
+    throw error;
+  }
+};
 
 const ensureLinkWithFallback = (source, destination, { label, fallbackCopy }) => {
   removePath(destination);
@@ -61,11 +83,11 @@ const ensureLinkWithFallback = (source, destination, { label, fallbackCopy }) =>
   }
 };
 
-// Bảo đảm thư mục tồn tại
+// Ensure shared directories exist
 ensureDir(sharedPublicDir);
 ensureDir(sharedInputDir);
 
-// Tạo symlink hoặc fallback copy
+// Create symlink or fallback copy
 ensureLinkWithFallback(assetsDir, sharedAssetsLink, {
   label: 'assets',
   fallbackCopy: true,
