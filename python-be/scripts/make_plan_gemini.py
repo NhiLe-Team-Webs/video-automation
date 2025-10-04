@@ -597,10 +597,11 @@ def normalize_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
                 "duration": round(duration, 3),
             }
 
-            if "kind" in raw_segment:
-                kind_value = normalize_segment_kind(raw_segment.get("kind"))
-                if kind_value:
-                    segment_plan["kind"] = kind_value
+            # Tạm thời vô hiệu hóa gắn nhãn segment `broll` để tránh chèn placeholder B-roll.
+            # if "kind" in raw_segment:
+            #     kind_value = normalize_segment_kind(raw_segment.get("kind"))
+            #     if kind_value:
+            #         segment_plan["kind"] = kind_value
 
             label = (raw_segment.get("label") or raw_segment.get("title") or "").strip()
             if label:
