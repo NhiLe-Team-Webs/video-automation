@@ -29,11 +29,15 @@ const ensureDir = (dir) => {
 const removePath = (targetPath) => {
   if (!existsSync(targetPath)) return;
 
-  try {
-    rmSync(targetPath, { recursive: true, force: true });
-  } catch (err) {
-    console.warn(`[removePath] Failed to remove ${targetPath}:`, err.message);
+  const stats = lstatSync(targetPath);
+  const options = {recursive: true, force: true};
+
+  if (stats.isSymbolicLink()) {
+    rmSync(targetPath, {force: true});
+    return;
   }
+
+  rmSync(targetPath, options);
 };
 
 
