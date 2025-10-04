@@ -206,6 +206,7 @@ def build_prompt(entries: Iterable[SrtEntry], *, extra_instructions: str | None 
         "- Để tạo highlight icon, dùng `type: \"icon\"` với `name` (tiêu đề ngắn), `icon` (ví dụ: `launch`, `fa:robot`), tùy chọn `accentColor`, `backgroundColor`, `iconColor`, `animation` ("
         + highlight_animations
         + ") cùng `sfx`/`volume` nếu phù hợp.\n"
+        "- Luon chen it nhat mot highlight `type: \"icon\"` neu transcript co diem gioi thieu san pham, thanh tuu hoac closing cam xuc; chon icon phu hop va giu animation gon gang (float/pulse/pop).\n"
         "- SFX phải chọn từ thư viện assets/sfx với path tương đối (vd: assets/sfx/ui/pop.mp3 hoặc ui/pop.mp3). Danh sách: "
         + sfx_names
         + ". Gợi ý: "
