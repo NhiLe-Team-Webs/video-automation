@@ -4,6 +4,7 @@ import type {
   HighlightPlan,
   HighlightPosition,
   HighlightType,
+  IconAnimation,
   Plan,
   SegmentPlan,
   TransitionDirection,
@@ -104,6 +105,25 @@ const highlightPositionSchema: z.ZodType<HighlightPosition> = z
   .enum(['top', 'center', 'bottom'])
   .catch('center');
 
+const iconAnimationSchema: z.ZodType<IconAnimation | undefined> = z
+  .string()
+  .optional()
+  .transform((value) => {
+    if (!value) {
+      return undefined;
+    }
+    const normalized = value.trim().toLowerCase();
+    switch (normalized) {
+      case 'float':
+      case 'pulse':
+      case 'spin':
+      case 'pop':
+        return normalized as IconAnimation;
+      default:
+        return undefined;
+    }
+  });
+
 const highlightPlanSchema: z.ZodType<HighlightPlan> = z
   .object({
     id: z.string(),
@@ -113,6 +133,7 @@ const highlightPlanSchema: z.ZodType<HighlightPlan> = z
     subtitle: z.string().optional(),
     badge: z.string().optional(),
     name: z.string().optional(),
+    icon: z.string().optional(),
     asset: z.string().optional(),
     start: z.number().min(0),
     duration: z.number().positive(),
@@ -123,8 +144,11 @@ const highlightPlanSchema: z.ZodType<HighlightPlan> = z
     sfx: z.string().optional(),
     gain: z.number().optional(),
     ducking: z.boolean().optional(),
-    animation: z.string().optional(),
+    animation: iconAnimationSchema,
     variant: z.string().optional(),
+    accentColor: z.string().optional(),
+    backgroundColor: z.string().optional(),
+    iconColor: z.string().optional(),
     volume: z.number().min(0).max(1).optional(),
   })
   .transform((highlight) => ({
@@ -223,10 +247,24 @@ export const planExample: Plan = {
     {
       id: 'icon-rocket',
       type: 'icon',
-      name: 'Rocket',
+      name: 'Chế độ tăng tốc',
+      icon: 'launch',
       start: 86.2,
       duration: 1.6,
-      sfx: 'ui/pop.mp3',
+      animation: 'pop',
+      accentColor: '#f97316',
+      backgroundColor: 'linear-gradient(135deg, rgba(249,115,22,0.18) 0%, rgba(15,23,42,0.92) 100%)',
+    },
+    {
+      id: 'icon-ai',
+      type: 'icon',
+      name: 'AI trợ lực',
+      icon: 'fa:robot',
+      start: 92,
+      duration: 1.8,
+      animation: 'spin',
+      accentColor: '#38bdf8',
+      backgroundColor: 'linear-gradient(135deg, rgba(56,189,248,0.16) 0%, rgba(17,24,39,0.94) 100%)',
     },
   ],
   meta: {

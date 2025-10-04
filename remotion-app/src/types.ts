@@ -30,6 +30,8 @@ export interface SegmentPlan {
 
 export type HighlightType = 'typewriter' | 'noteBox' | 'sectionTitle' | 'icon';
 
+export type IconAnimation = 'float' | 'pulse' | 'spin' | 'pop';
+
 export type HighlightPosition = 'top' | 'center' | 'bottom';
 
 export interface HighlightPlan {
@@ -40,6 +42,7 @@ export interface HighlightPlan {
   subtitle?: string;
   badge?: string;
   name?: string;
+  icon?: string;
   asset?: string;
   start: number;
   duration: number;
@@ -50,6 +53,10 @@ export interface HighlightPlan {
   sfx?: string;
   gain?: number;
   ducking?: boolean;
+  accentColor?: string;
+  backgroundColor?: string;
+  iconColor?: string;
+  animation?: IconAnimation;
   variant?: string;
   [key: string]: unknown;
 }

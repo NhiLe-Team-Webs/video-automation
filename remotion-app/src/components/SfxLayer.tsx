@@ -1,6 +1,7 @@
 import {Audio, Sequence, staticFile} from 'remotion';
 import {SFX_CATALOG} from '../data/sfxCatalog';
 import type {HighlightPlan} from '../types';
+import {resolveIconVisual} from '../icons/registry';
 import type {TimelineSegment} from './timeline';
 import type {RuntimeConfig} from '../config';
 
@@ -155,10 +156,23 @@ const collectHighlightEvents = (highlights: HighlightPlan[], fps: number): SfxEv
   const events: SfxEvent[] = [];
 
   highlights.forEach((highlight) => {
-    if (!highlight.sfx) {
+    const iconFallback =
+      (highlight.type ?? 'noteBox') === 'icon'
+        ? resolveIconVisual(
+            typeof highlight.icon === 'string' && highlight.icon.trim()
+              ? highlight.icon
+              : typeof highlight.name === 'string' && highlight.name.trim()
+                ? highlight.name
+                : undefined
+          )?.defaultSfx
+        : undefined;
+
+    const requestedSfx = highlight.sfx ?? iconFallback;
+
+    if (!requestedSfx) {
       return;
     }
-    const normalized = normalizeSfx(highlight.sfx);
+    const normalized = normalizeSfx(requestedSfx);
     if (!normalized) {
       if (process.env.NODE_ENV !== 'production') {
         console.warn(`Could not resolve SFX asset for highlight ${highlight.id}`);
