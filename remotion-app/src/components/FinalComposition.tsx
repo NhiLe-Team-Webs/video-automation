@@ -129,7 +129,6 @@ export const FinalComposition: React.FC<FinalCompositionProps> = ({
       <AbsoluteFill style={{padding: '72px 84px'}}>
         <AbsoluteFill
           style={{
-            borderRadius: '1rem',
             overflow: 'hidden',
             boxShadow: '0 32px 140px rgba(12,12,12,0.38)',
             backgroundColor: BRAND.charcoal,
