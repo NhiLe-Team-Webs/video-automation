@@ -620,6 +620,8 @@ def normalize_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
                     break
             if silence_after_raw is not None:
                 segment_plan["silenceAfter"] = ensure_bool(silence_after_raw)
+            else:
+                segment_plan["silenceAfter"] = False
 
             gap_after_raw = None
             for key in ("gapAfter", "gap_after"):
