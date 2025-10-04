@@ -23,23 +23,21 @@ if (!existsSync(assetsDir)) {
 }
 
 const ensureDir = (dir) => {
-  mkdirSync(dir, {recursive: true});
+  mkdirSync(dir, { recursive: true });
 };
 
 const removePath = (targetPath) => {
-  if (!existsSync(targetPath)) {
-    return;
-  }
+  if (!existsSync(targetPath)) return;
 
-  const stats = lstatSync(targetPath);
-  if (stats.isDirectory() && !stats.isSymbolicLink()) {
-    rmSync(targetPath, {recursive: true, force: true});
-  } else {
-    rmSync(targetPath, {force: true});
+  try {
+    rmSync(targetPath, { recursive: true, force: true });
+  } catch (err) {
+    console.warn(`[removePath] Failed to remove ${targetPath}:`, err.message);
   }
 };
 
-const ensureLinkWithFallback = (source, destination, {label, fallbackCopy}) => {
+
+const ensureLinkWithFallback = (source, destination, { label, fallbackCopy }) => {
   removePath(destination);
   try {
     symlinkSync(source, destination, linkType);
@@ -47,21 +45,27 @@ const ensureLinkWithFallback = (source, destination, {label, fallbackCopy}) => {
     return true;
   } catch (error) {
     console.warn(
-      `[${label}] Failed to create symlink: ${error instanceof Error ? error.message : String(error)}`,
+      `[${label}] Failed to create symlink: ${
+        error instanceof Error ? error.message : String(error)
+      }`
     );
-    if (!fallbackCopy) {
-      return false;
-    }
-    cpSync(source, destination, {recursive: true});
+    if (!fallbackCopy) return false;
+
+    cpSync(source, destination, { recursive: true });
     console.log(`[${label}] Copied contents into ${destination}`);
     return false;
   }
 };
 
+// Bảo đảm thư mục tồn tại
 ensureDir(sharedPublicDir);
 ensureDir(sharedInputDir);
 
-ensureLinkWithFallback(assetsDir, sharedAssetsLink, {label: 'assets', fallbackCopy: true});
+// Tạo symlink hoặc fallback copy
+ensureLinkWithFallback(assetsDir, sharedAssetsLink, {
+  label: 'assets',
+  fallbackCopy: true,
+});
 const linkedPublic = ensureLinkWithFallback(sharedPublicDir, appPublicDir, {
   label: 'public',
   fallbackCopy: true,
@@ -69,6 +73,6 @@ const linkedPublic = ensureLinkWithFallback(sharedPublicDir, appPublicDir, {
 
 if (!linkedPublic) {
   console.log(
-    `[public] Using a copied public workspace. Keep in mind updates under ${sharedPublicDir} will not auto-sync.`,
+    `[public] Using a copied public workspace. Keep in mind updates under ${sharedPublicDir} will not auto-sync.`
   );
 }

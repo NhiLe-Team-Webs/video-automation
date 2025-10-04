@@ -4,6 +4,7 @@ import type {CSSProperties, ReactNode} from 'react';
 import type {HighlightPlan, HighlightTheme} from '../types';
 import {BRAND} from '../config';
 import {getIconByName} from '../icons/lucide';
+import * as React from 'react';
 
 const POSITION_STYLE = {
   top: {justifyContent: 'flex-start', paddingTop: 140},

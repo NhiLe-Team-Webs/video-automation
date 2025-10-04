@@ -1,4 +1,5 @@
 import type {FC, ReactNode} from 'react';
+import * as React from 'react';
 
 export type IconComponent = FC<{
   size?: number;
