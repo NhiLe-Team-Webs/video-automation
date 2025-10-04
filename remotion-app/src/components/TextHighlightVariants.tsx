@@ -9,7 +9,7 @@ const POSITION_STYLES: Record<HighlightPosition, CSSProperties> = {
   bottom: {justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 140},
 };
 
-const ease = Easing.bezier(0.42, 0, 0.21, 1);
+const ease = Easing.bezier(0.42, 0, 0.58, 1);
 
 interface HighlightRenderContext {
   highlight: HighlightPlan;
@@ -35,7 +35,10 @@ const applyPositioning = (
     display: 'flex',
     padding: '0 6%',
     color: theme?.textColor ?? BRAND.white,
-    fontFamily: theme?.fontFamily ?? "'Inter Tight', 'Inter', sans-serif",
+    fontFamily: theme?.fontFamily ?? BRAND.fonts.body,
+    fontWeight: 500,
+    letterSpacing: 0.2,
+    textRendering: 'optimizeLegibility',
     pointerEvents: 'none',
     ...POSITION_STYLES[highlight.position ?? 'center'],
   };
@@ -57,16 +60,25 @@ const renderTypewriter: HighlightRenderer = ({highlight, appear, exit, theme}) =
   const caretOpacity = 0.35 + 0.65 * Math.abs(Math.sin(eased * Math.PI * 2.8));
 
   const cardStyle: CSSProperties = {
-    padding: '40px 68px',
-    borderRadius: 32,
-    border: `2px solid ${theme?.accentColor ?? BRAND.red}`,
-    background: 'rgba(10, 12, 18, 0.78)',
+    padding: '2.8rem 4.5rem',
+    borderRadius: '1rem',
+    border: `1px solid ${theme?.accentColor ?? BRAND.overlays.glassBorder}`,
+    background:
+      theme?.backgroundColor ??
+      `linear-gradient(140deg, ${BRAND.overlays.glassBackground} 0%, rgba(28,28,28,0.72) 100%)`,
+    backdropFilter: 'blur(18px)',
     fontSize: 60,
-    lineHeight: 1.3,
-    letterSpacing: 0.4,
-    boxShadow: '0 26px 80px rgba(0,0,0,0.45)',
+    fontFamily: BRAND.fonts.heading,
+    fontWeight: 600,
+    lineHeight: 1.28,
+    letterSpacing: 0.6,
+    color: BRAND.white,
+    textShadow: '0 16px 40px rgba(12,12,12,0.45)',
+    boxShadow: '0 18px 70px rgba(12,12,12,0.3)',
     opacity: exitEased,
-    transform: `translateY(${(1 - eased) * 24}px)` as string,
+    transform: `translateY(${(1 - eased) * 26}px)` as string,
+    position: 'relative',
+    overflow: 'hidden',
   };
 
   const caret: CSSProperties = {
@@ -74,7 +86,7 @@ const renderTypewriter: HighlightRenderer = ({highlight, appear, exit, theme}) =
     width: '0.6ch',
     height: '1.05em',
     marginLeft: '0.3ch',
-    background: theme?.accentColor ?? BRAND.red,
+    background: theme?.accentColor ?? BRAND.primary,
     opacity: caretOpacity,
     verticalAlign: 'baseline',
   };
@@ -83,8 +95,29 @@ const renderTypewriter: HighlightRenderer = ({highlight, appear, exit, theme}) =
     highlight,
     theme,
     <div style={cardStyle}>
-      <span>{content}</span>
-      <span style={caret} />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: BRAND.radialGlow,
+          mixBlendMode: 'screen',
+          opacity: 0.55,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: '-18%',
+          right: '-12%',
+          width: '32%',
+          height: '48%',
+          background: BRAND.overlays.triangle,
+          clipPath: 'polygon(0 0, 100% 0, 100% 100%)',
+          opacity: 0.8,
+        }}
+      />
+      <span style={{position: 'relative', zIndex: 1}}>{content}</span>
+      <span style={{...caret, position: 'relative', zIndex: 1}} />
     </div>
   );
 };
@@ -108,17 +141,25 @@ const renderNoteBox: HighlightRenderer = ({highlight, appear, exit, theme}) => {
 
   const cardStyle: CSSProperties = {
     minWidth: '48%',
-    maxWidth: '68%',
-    padding: '36px 48px',
-    borderRadius: highlight.radius ?? 24,
-    background: highlight.bg ?? 'rgba(18, 22, 30, 0.92)',
-    border: `2px solid ${theme?.accentColor ?? BRAND.red}`,
-    boxShadow: '0 22px 70px rgba(0,0,0,0.45)',
-    fontSize: 54,
+    maxWidth: '72%',
+    padding: '3rem 3.6rem',
+    borderRadius: highlight.radius ? `${highlight.radius}px` : '1rem',
+    background:
+      highlight.bg ??
+      `linear-gradient(150deg, ${BRAND.overlays.glassBackground} 0%, rgba(28,28,28,0.72) 100%)`,
+    border: `1px solid ${theme?.accentColor ?? BRAND.overlays.glassBorder}`,
+    boxShadow: '0 18px 70px rgba(12,12,12,0.28)',
+    color: BRAND.white,
+    fontSize: 52,
+    fontFamily: BRAND.fonts.body,
+    fontWeight: 600,
     lineHeight: 1.35,
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
     transform: translate,
     opacity: exitEased,
+    position: 'relative',
+    overflow: 'hidden',
+    backdropFilter: 'blur(20px)',
   };
 
   const typedChars = Math.max(0, Math.round(text.length * clamp01(appear)));
@@ -127,13 +168,7 @@ const renderNoteBox: HighlightRenderer = ({highlight, appear, exit, theme}) => {
   return applyPositioning(
     highlight,
     theme,
-    <div
-      style={{
-        ...cardStyle,
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
+    <div style={cardStyle}>
       <div
         style={{
           position: 'absolute',
@@ -141,43 +176,64 @@ const renderNoteBox: HighlightRenderer = ({highlight, appear, exit, theme}) => {
           borderRadius: cardStyle.borderRadius,
           background:
             highlight.bg ??
-            'linear-gradient(135deg, rgba(30,34,44,0.95) 0%, rgba(12,12,16,0.95) 100%)',
-          opacity: 0.92,
+            `linear-gradient(165deg, rgba(255,255,255,0.08) 0%, rgba(28,28,28,0.6) 100%)`,
+          mixBlendMode: 'soft-light',
+          opacity: 0.9,
         }}
       />
-      <div style={{position: 'relative'}}>
+      <div
+        style={{
+          position: 'absolute',
+          top: '-30%',
+          left: '-20%',
+          width: '45%',
+          height: '70%',
+          background: BRAND.overlays.triangle,
+          clipPath: 'polygon(0 0, 100% 0, 0 100%)',
+          opacity: 0.65,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '-28%',
+          right: '-18%',
+          width: '36%',
+          height: '54%',
+          background: BRAND.overlays.accentGradient,
+          clipPath: 'polygon(0 100%, 100% 0, 100% 100%)',
+          opacity: 0.55,
+        }}
+      />
+      <div style={{position: 'relative', zIndex: 1}}>
         <div
           style={{
-            position: 'absolute',
-            height: 6,
-            width: '12%',
-            top: -14,
-            left: 0,
-            background: theme?.accentColor ?? BRAND.red,
-            borderRadius: 6,
-            opacity: 0.9,
-          }}
-        />
-        <span>{content}</span>
-        <span
-          style={{
             display: 'inline-block',
-            width: '0.4ch',
-            height: '1em',
-            marginLeft: '0.3ch',
-            background: theme?.accentColor ?? BRAND.red,
-            opacity: 0.45 + 0.45 * Math.abs(Math.sin(appear * Math.PI * 3.1)),
+            height: 8,
+            width: '18%',
+            marginBottom: 24,
+            background: theme?.accentColor ?? BRAND.primary,
+            borderRadius: 999,
+            boxShadow: '0 6px 24px rgba(200,16,46,0.45)',
           }}
         />
+        <div style={{fontSize: 'inherit'}}>
+          <span>{content}</span>
+          <span
+            style={{
+              display: 'inline-block',
+              width: '0.4ch',
+              height: '1.05em',
+              marginLeft: '0.3ch',
+              background: theme?.accentColor ?? BRAND.primary,
+              opacity: 0.45 + 0.45 * Math.abs(Math.sin(appear * Math.PI * 3.1)),
+            }}
+          />
+        </div>
       </div>
     </div>
   );
 };
-
-const buildGridBackground = (base: string) =>
-  `linear-gradient(90deg, transparent 0%, transparent 92%, rgba(255,255,255,0.03) 100%),
-   linear-gradient(0deg, transparent 0%, transparent 92%, rgba(255,255,255,0.03) 100%),
-   ${base}`;
 
 const renderSectionTitle: HighlightRenderer = ({highlight, appear, exit, theme}) => {
   const title = highlight.title ?? highlight.text ?? '';
@@ -186,7 +242,10 @@ const renderSectionTitle: HighlightRenderer = ({highlight, appear, exit, theme})
   }
 
   const backgroundVariant = (highlight.variant ?? '').toLowerCase();
-  const baseColor = backgroundVariant === 'black' ? BRAND.black : BRAND.red;
+  const baseGradient =
+    backgroundVariant === 'black'
+      ? `linear-gradient(140deg, rgba(28,28,28,0.95) 0%, rgba(12,12,12,0.98) 100%)`
+      : BRAND.gradient;
 
   const eased = ease(clamp01(appear));
   const exitEased = clamp01(exit);
@@ -200,19 +259,53 @@ const renderSectionTitle: HighlightRenderer = ({highlight, appear, exit, theme})
     alignItems: 'center',
     justifyContent: 'center',
     color: theme?.textColor ?? BRAND.white,
-    background: buildGridBackground(
-      `radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08), transparent 60%), ${baseColor}`
-    ),
+    background: baseGradient,
     transform: `scale(${scale})`,
     opacity: exitEased,
     textAlign: 'center',
-    boxShadow: '0 0 120px rgba(0,0,0,0.45)',
+    boxShadow: '0 24px 120px rgba(12,12,12,0.32)',
     padding: '0 12%',
     pointerEvents: 'none',
+    borderRadius: '1rem',
+    overflow: 'hidden',
+    fontFamily: BRAND.fonts.heading,
   };
 
   return (
     <AbsoluteFill style={container}>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: BRAND.radialGlow,
+          opacity: 0.6,
+          mixBlendMode: 'screen',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: '-18%',
+          right: '-12%',
+          width: '35%',
+          height: '55%',
+          background: BRAND.overlays.accentGradient,
+          clipPath: 'polygon(0 0, 100% 0, 100% 100%)',
+          opacity: 0.65,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '-25%',
+          left: '-15%',
+          width: '38%',
+          height: '58%',
+          background: BRAND.overlays.triangle,
+          clipPath: 'polygon(0 100%, 0 0, 100% 100%)',
+          opacity: 0.7,
+        }}
+      />
       {highlight.badge ? (
         <div
           style={{
@@ -220,21 +313,36 @@ const renderSectionTitle: HighlightRenderer = ({highlight, appear, exit, theme})
             letterSpacing: 6,
             textTransform: 'uppercase',
             marginBottom: 28,
-            opacity: 0.76,
+            opacity: 0.8,
+            fontFamily: BRAND.fonts.body,
           }}
         >
           {highlight.badge}
         </div>
       ) : null}
-      <div style={{fontSize: 96, fontWeight: 700, lineHeight: 1.1, letterSpacing: 1.4}}>{title}</div>
+      <div
+        style={{
+          fontSize: 100,
+          fontWeight: 800,
+          lineHeight: 1.05,
+          letterSpacing: 2.2,
+          textTransform: 'uppercase',
+          textShadow: '0 22px 60px rgba(12,12,12,0.45)',
+          WebkitTextStroke: '1px rgba(255,255,255,0.22)',
+          padding: '0 4%',
+        }}
+      >
+        {title}
+      </div>
       {highlight.subtitle ? (
         <div
           style={{
             marginTop: 28,
-            fontSize: 42,
-            opacity: 0.8,
-            maxWidth: '80%',
+            fontSize: 40,
+            opacity: 0.86,
+            maxWidth: '70%',
             lineHeight: 1.4,
+            fontFamily: BRAND.fonts.body,
           }}
         >
           {highlight.subtitle}

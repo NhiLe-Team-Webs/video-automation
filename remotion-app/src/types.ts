@@ -78,7 +78,7 @@ export interface CompositionConfigOverrides {
   minPauseMs?: number;
   audio?: Partial<{voiceDuckDb: number; sfxBaseGainDb: number}>;
   transitions?: Partial<{defaultFade: number}>;
-  brand?: Partial<{red: string; black: string; white: string}>;
+  brand?: Partial<Record<string, string>>;
 }
 
 export interface FinalCompositionProps {
