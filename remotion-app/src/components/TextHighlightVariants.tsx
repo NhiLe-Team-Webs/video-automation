@@ -24,6 +24,14 @@ type HighlightRenderer = (context: HighlightRenderContext) => ReactNode;
 
 const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
 
+const computeFocusScale = (appear: number, exit: number) => {
+  const appearEased = ease(clamp01(appear));
+  const exitEased = clamp01(exit);
+  const introZoom = 0.985 + appearEased * 0.035;
+  const outroZoom = 0.99 + exitEased * 0.02;
+  return introZoom * outroZoom;
+};
+
 const applyPositioning = (
   highlight: HighlightPlan,
   theme: HighlightTheme | undefined,
@@ -59,6 +67,8 @@ const renderTypewriter: HighlightRenderer = ({highlight, appear, exit, theme}) =
   const content = text.slice(0, visibleChars);
   const caretOpacity = 0.35 + 0.65 * Math.abs(Math.sin(eased * Math.PI * 2.8));
 
+  const scale = computeFocusScale(appear, exit);
+
   const cardStyle: CSSProperties = {
     padding: '2.8rem 4.5rem',
     borderRadius: '1rem',
@@ -76,7 +86,7 @@ const renderTypewriter: HighlightRenderer = ({highlight, appear, exit, theme}) =
     textShadow: '0 16px 40px rgba(12,12,12,0.45)',
     boxShadow: '0 18px 70px rgba(12,12,12,0.3)',
     opacity: exitEased,
-    transform: `translateY(${(1 - eased) * 26}px)` as string,
+    transform: `translateY(${(1 - eased) * 26}px) scale(${scale})`,
     position: 'relative',
     overflow: 'hidden',
   };
@@ -139,6 +149,8 @@ const renderNoteBox: HighlightRenderer = ({highlight, appear, exit, theme}) => {
       ? `translateY(${translateValue}px)`
       : `translateX(${direction === 'left' ? -translateValue : translateValue}px)`;
 
+  const scale = computeFocusScale(appear, exit);
+
   const cardStyle: CSSProperties = {
     minWidth: '48%',
     maxWidth: '72%',
@@ -155,7 +167,7 @@ const renderNoteBox: HighlightRenderer = ({highlight, appear, exit, theme}) => {
     fontWeight: 600,
     lineHeight: 1.35,
     letterSpacing: 0.5,
-    transform: translate,
+    transform: `${translate} scale(${scale})`,
     opacity: exitEased,
     position: 'relative',
     overflow: 'hidden',
@@ -249,7 +261,9 @@ const renderSectionTitle: HighlightRenderer = ({highlight, appear, exit, theme})
 
   const eased = ease(clamp01(appear));
   const exitEased = clamp01(exit);
-  const scale = 1 + (1 - exitEased) * 0.015 + (1 - eased) * 0.015;
+  const focusScale = computeFocusScale(appear, exit);
+  const macroScale = 1 + (1 - exitEased) * 0.012 + (1 - eased) * 0.01;
+  const scale = focusScale * macroScale;
 
   const container: CSSProperties = {
     position: 'absolute',
