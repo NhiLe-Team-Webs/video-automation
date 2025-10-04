@@ -1,0 +1,8 @@
+{
+  "auto_editor": {
+    "threshold": 0.06,
+    "margin": "0.75s,1s",
+    "silent_speed": 4,
+    "video_speed": 1
+  }
+}

@@ -43,11 +43,13 @@ The scripts inside `python-be/` normalize your source footage, generate transcri
    run_all.bat                      # or run_all.bat path\to\video.mp4
    ```
 
-   The script performs the following:
-   - Auto-Editor removes silence → `outputs/stage1_cut.mp4`.
+  The script performs the following:
+   - Auto-Editor trims long pauses with a smooth-pace preset → `outputs/stage1_cut.mp4` (configurable via `config/video_editing.json`).
    - Whisper generates an SRT transcript → `outputs/stage1_cut.srt`.
    - A planning step produces `plan.json` (Gemini first, static mapping fallback).
-   - Copies `stage1_cut.mp4` and `plan.json` into `public/input/` as `input.mp4` and `plan.json`.
+   - Copies `stage1_cut.mp4` (or the original video if trimming is skipped) and `plan.json` into `public/input/` as `input.mp4` and `plan.json`.
+
+   > 💡 Tweak the trimming feel by editing `config/video_editing.json` (`threshold`, `margin`, `silent_speed`, `video_speed`). Use `./run_all.sh --autoedit false` (or `run_all.bat --autoedit=false`) to bypass Auto-Editor when you want the raw take.
 
 4. **Render with Remotion**
    ```bash
